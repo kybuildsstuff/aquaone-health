@@ -32,8 +32,8 @@ Do the same for **Confirm signup** (a member's very first sign-in can send this 
 
 ## 4. Before launch — Authentication → Emails → SMTP Settings (custom SMTP via Resend)
 Supabase's built-in email sender is limited to a handful of emails an hour and is for testing only. Before launch:
-- Enable custom SMTP: host `smtp.resend.com`, port `465`, username `resend`, password = a Resend API key with sending access, sender `AquaOne Health <hello@send.trypurestream.com>`.
-- Needs the Resend domain `send.trypurestream.com` verified first (DNS step).
+- Enable custom SMTP: host `smtp.resend.com`, port `465`, username `resend`, password = a Resend API key with sending access, sender `AquaOne Health <hello@notify.trypurestream.com>`.
+- Needs the Resend domain `notify.trypurestream.com` verified first (DNS step).
 - Then raise **Authentication → Rate Limits → emails per hour** (e.g. 300).
 
 ## 5. Vercel environment variables (Vercel → aquaone-health → Settings → Environment Variables)
