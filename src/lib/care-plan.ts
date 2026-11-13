@@ -56,21 +56,22 @@ function hash(s: string): number {
 // Picks the day's three task ids. Rules, in order:
 //   1. only tasks this cat is eligible for;
 //   2. none of yesterday's tasks, as long as at least three others are eligible;
-//   3. one water task first (it's a water-fountain brand), then one task for one of her
-//      conditions if she has any, then the rest in the day's shuffled order.
+//   3. one water task first (it's a water-fountain brand) and no second one, then one task
+//      for one of her conditions if she has any, then the rest in the day's shuffled order.
 export function pickTasks(library: CareTask[], cat: CatProfile, date: string, yesterdayIds: string[] = []): string[] {
   const order = (t: CareTask) => hash(`${cat.id}|${date}|${t.id}`);
   const eligible = library.filter((t) => isEligible(t, cat)).sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id));
   const fresh = eligible.filter((t) => !yesterdayIds.includes(t.id));
   const pool = fresh.length >= TASKS_PER_DAY ? fresh : eligible;
+  const isWater = (t: CareTask) => t.tags.includes("water");
 
   const picks: CareTask[] = [];
   const take = (t: CareTask | undefined) => {
     if (t && picks.length < TASKS_PER_DAY && !picks.includes(t)) picks.push(t);
   };
-  take(pool.find((t) => t.tags.includes("water")));
-  take(pool.find((t) => t.conditions.length > 0 && !picks.includes(t)));
-  for (const t of pool) take(t);
-  for (const t of eligible) take(t);
+  take(pool.find(isWater));
+  take(pool.find((t) => t.conditions.length > 0 && !isWater(t)));
+  for (const t of pool) if (!isWater(t)) take(t);
+  for (const t of eligible) take(t); // only reached if the library is too small for the rules above
   return picks.map((t) => t.id);
 }

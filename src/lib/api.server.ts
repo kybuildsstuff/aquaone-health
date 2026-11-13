@@ -33,7 +33,7 @@ export async function memberRoute<S extends z.ZodType, T>(
       console.error(`${route}_failed invalid`, user.id, JSON.stringify(parsed.error.issues.map((i) => [i.path.join("."), i.message])));
       return NextResponse.json({ error: "invalid" }, { status: 400 });
     }
-    const result = await action(supabase as unknown as SupabaseClient, parsed.data);
+    const result = await action(supabase, parsed.data);
     if (!result.ok) {
       console.error(`${route}_failed ${result.error}`, user.id, result.detail ?? "");
       return NextResponse.json({ error: result.error }, { status: result.status });

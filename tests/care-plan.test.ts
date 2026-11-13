@@ -86,6 +86,8 @@ describe("pickTasks", () => {
       const ids = pickTasks(library, cat, "2026-11-20");
       const tasks = ids.map((id) => library.find((t) => t.id === id)!);
       expect(tasks[0].tags).toContain("water");
+      // Found by hand (2026-11-13): a condition-matched water task filled the condition slot, giving two water tasks.
+      expect(tasks.filter((t) => t.tags.includes("water")), JSON.stringify(cat)).toHaveLength(1);
       if (cat.conditions.length) expect(tasks.some((t) => t.conditions.some((c) => cat.conditions.includes(c))), JSON.stringify(cat)).toBe(true);
     }
   });
