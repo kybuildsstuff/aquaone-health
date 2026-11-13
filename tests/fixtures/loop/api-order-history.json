@@ -1,0 +1,62 @@
+{
+  "success": true,
+  "message": "Order history fetched successfully",
+  "data": [
+    {
+      "id": 63774628,
+      "shopifyId": 5808406954293,
+      "status": "PROCESSED",
+      "billingDate": "2024-01-12T05:00:46.000Z",
+      "fulfillmentStatus": null,
+      "financialStatus": "paid",
+      "note": null,
+      "noteAttributes": [],
+      "shopifyCreatedAt": "2023-11-03T00:43:04.000Z",
+      "shopifyProcessedAt": "2023-11-03T00:43:04.000Z",
+      "shopifyUpdatedAt": "2023-11-03T00:43:08.000Z",
+      "currencyCode": "USD",
+      "totalPriceUsd": "77.92",
+      "totalDiscount": "7.35",
+      "totalLineItemsPrice": "54.05",
+      "totalShippingPrice": "22.82",
+      "shopifyOrderNumber": 2292,
+      "lines": [
+        {
+          "productShopifyId": 8441396035893,
+          "variantShopifyId": 45715132481845,
+          "name": "Zero product",
+          "productTitle": "Zero product",
+          "variantTitle": null,
+          "price": 0,
+          "sku": "",
+          "quantity": 1,
+          "isOneTime": false
+        },
+        {
+          "productShopifyId": 8641129120053,
+          "variantShopifyId": 46596527653173,
+          "name": "Preset SP Test CP 2",
+          "productTitle": "Preset SP Test CP 2",
+          "variantTitle": null,
+          "price": 1.2,
+          "sku": "",
+          "quantity": 1,
+          "isOneTime": false
+        }
+      ],
+      "shippingAddress": {
+        "name": "Gautam Nirala",
+        "phone": null,
+        "company": null,
+        "city": "Delhi",
+        "zip": "110009",
+        "address1": "2346 Hudson Lane GTB Nagar",
+        "address2": null,
+        "provinceCode": "DL",
+        "countryCode": "IN"
+      }
+    }
+  ],
+  "code": "SUCCESS",
+  "pageInfo": null
+}

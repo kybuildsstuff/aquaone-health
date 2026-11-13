@@ -1,0 +1,225 @@
+{
+  "payload": {
+    "id": 343701330,
+    "shopifyId": null,
+    "scheduledAt": "2026-09-24T14:05:52.000Z",
+    "status": "FAILED",
+    "currencyCode": "USD",
+    "shippingPriceCurrencyCode": "USD",
+    "totalLineItemsPrice": "38.49",
+    "totalDiscountAmount": "0.00",
+    "subtotalPrice": "38.49",
+    "totalShippingPrice": "8.00",
+    "totalTaxes": "0.00",
+    "totalPrice": "46.49",
+    "note": null,
+    "customAttributes": null,
+    "discountCodes": null,
+    "lineItems": [
+      {
+        "shopifyId": null,
+        "name": "3 in 1  Box - Small",
+        "productTitle": "3 in 1  Box",
+        "variantTitle": "Small",
+        "variantImage": "https://cdn.shopify.com/s/files/1/0981/0798/2131/files/Harry_s-Most-Popular-Product-Bundles-1024x577-1.webp?v=1780305112",
+        "sku": null,
+        "productShopifyId": 10193276207411,
+        "variantShopifyId": 53462862987571,
+        "price": 38.49,
+        "quantity": 1,
+        "properties": null,
+        "requiresShipping": false,
+        "taxable": false,
+        "weightInGrams": 0
+      }
+    ],
+    "skippedLineItems": [],
+    "shippingAddress": null,
+    "chargeOffsetDays": 2,
+    "shippingLines": null,
+    "isDunning": true,
+    "firstPaymentAttemptAt": "2026-09-21T06:52:54.000Z",
+    "customer": {
+      "shopifyId": 9732955898163,
+      "firstName": "Will",
+      "lastName": "Smith",
+      "email": "vnitdevesh@gmail.com",
+      "phone": null
+    },
+    "subscription": {
+      "id": 34964678,
+      "shopifyId": 33513865523,
+      "createdAt": "2026-08-20T06:24:56.000Z",
+      "status": "ACTIVE",
+      "originOrderShopifyId": 7365003313459,
+      "completedOrdersCount": 2,
+      "currencyCode": "USD",
+      "totalLineItemPrice": 38.49,
+      "totalLineItemDiscountedPrice": 36.57,
+      "deliveryPrice": 8,
+      "pausedAt": null,
+      "cancelledAt": null,
+      "cancellationReason": null,
+      "cancellationComment": null,
+      "hasCustomPlan": false,
+      "billingPolicy": {
+        "interval": "YEAR",
+        "intervalCount": 1,
+        "prepaidIntervalCount": 1,
+        "minCycles": null,
+        "maxCycles": null,
+        "anchors": null
+      },
+      "deliveryPolicy": {
+        "interval": "YEAR",
+        "intervalCount": 1
+      },
+      "isPrepaid": false,
+      "nextOrderDate": "2026-09-24T14:05:52.000Z",
+      "nextOrderDateEpoch": 1790258752,
+      "discounts": [
+        {
+          "node": {
+            "id": "gid://shopify/SubscriptionManualDiscount/08e3f21f-d91c-46d2-9943-a1dfc3af7363",
+            "type": "MANUAL",
+            "title": "scsa",
+            "value": {
+              "__typename": "SubscriptionDiscountPercentageValue",
+              "percentage": 5
+            },
+            "targetType": "LINE_ITEM",
+            "usageCount": 0,
+            "entitledLines": {
+              "all": true,
+              "lines": {
+                "nodes": []
+              }
+            },
+            "rejectionReason": null,
+            "recurringCycleLimit": 1
+          }
+        }
+      ],
+      "hasBundle": false,
+      "willAutoResume": false,
+      "note": null,
+      "customAttributes": [],
+      "lineItems": [
+        {
+          "id": 87415677,
+          "shopifyId": "8cf58212-643c-4e4b-aa19-c4648a0806d9",
+          "productShopifyId": 10193276207411,
+          "variantShopifyId": 53462862987571,
+          "name": "3 in 1  Box - Small",
+          "productTitle": "3 in 1  Box",
+          "variantTitle": "Small",
+          "variantImage": "https://cdn.shopify.com/s/files/1/0981/0798/2131/files/Harry_s-Most-Popular-Product-Bundles-1024x577-1.webp?v=1780305112",
+          "quantity": 1,
+          "price": "38.49",
+          "basePrice": "54.99",
+          "discountedPrice": "36.57",
+          "discountAllocations": [
+            {
+              "amount": {
+                "amount": "1.92",
+                "currencyCode": "USD"
+              },
+              "discount": {
+                "id": "gid://shopify/SubscriptionManualDiscount/08e3f21f-d91c-46d2-9943-a1dfc3af7363",
+                "type": "MANUAL",
+                "title": "scsa",
+                "value": {
+                  "percentage": 5
+                },
+                "targetType": "LINE_ITEM",
+                "usageCount": 0,
+                "entitledLines": {
+                  "all": true
+                },
+                "rejectionReason": null,
+                "recurringCycleLimit": 1
+              }
+            }
+          ],
+          "pricingPolicy": {
+            "basePrice": {
+              "amount": "54.99",
+              "currencyCode": "USD"
+            },
+            "cycleDiscounts": [
+              {
+                "afterCycle": 0,
+                "computedPrice": {
+                  "amount": "38.49",
+                  "currencyCode": "USD"
+                },
+                "adjustmentType": "PERCENTAGE",
+                "adjustmentValue": {
+                  "percentage": 30
+                }
+              }
+            ]
+          },
+          "sellingPlanShopifyId": 10120888627,
+          "sellingPlanName": "Deliver every year",
+          "sku": null,
+          "requiresShipping": true,
+          "taxable": true,
+          "bundleTransactionId": null,
+          "bundleName": null,
+          "isOneTimeAdded": false,
+          "isOneTimeRemoved": false,
+          "attributes": [],
+          "weightInGrams": 0,
+          "bundleVariantName": null
+        }
+      ],
+      "shippingAddress": {
+        "firstName": "Will",
+        "lastName": "Smith",
+        "company": null,
+        "address1": "House 5",
+        "address2": null,
+        "city": "Ithaca",
+        "zip": "14853",
+        "countryCode": "US",
+        "provinceCode": "NY"
+      },
+      "shippingLines": {
+        "code": "Standard",
+        "title": "Standard"
+      },
+      "isBillingRetryOn": true
+    },
+    "paymentMethod": {
+      "id": 38078781,
+      "shopifyId": "9cb4cdd414b637b70c249c174bb3e7ba",
+      "customerId": 443497692,
+      "customerShopifyId": 9732955898163,
+      "type": "CustomerCreditCard",
+      "name": "Will Smith",
+      "brand": "bogus",
+      "paypalAccountEmail": null,
+      "lastDigits": "1",
+      "riskLevel": "safe",
+      "expiryMonth": "12",
+      "expiryYear": "34"
+    },
+    "paymentAttempt": {
+      "shopifyId": 152669225267,
+      "idempotencyKey": "Priority:33513865523-nAcBn",
+      "createdAt": "2026-09-21T06:52:54.000Z",
+      "updatedAt": "2026-09-21T06:52:54.000Z",
+      "errorMessage": "Gateway test mode error",
+      "errorCode": "PAYMENT_METHOD_INCOMPATIBLE_WITH_GATEWAY_CONFIG",
+      "retryLeftCount": 4,
+      "retryDelay": 3,
+      "retryAttemptCount": 1,
+      "failureAction": null,
+      "isHardDeclined": false
+    }
+  },
+  "metaData": {
+    "myshopifyDomain": "devesh-onboarding.myshopify.com"
+  }
+}

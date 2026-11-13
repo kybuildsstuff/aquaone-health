@@ -1,0 +1,125 @@
+{
+  "success": true,
+  "message": "Subscription fetched successfully",
+  "data": {
+    "id": 35618663,
+    "shopifyId": 33878704435,
+    "originOrderShopifyId": null,
+    "createdAt": "2026-08-26T06:17:50.000Z",
+    "updatedAt": "2026-08-26T10:08:54.000Z",
+    "orderNote": null,
+    "totalLineItemPrice": 10.5,
+    "totalLineItemDiscountedPrice": 10.5,
+    "deliveryPrice": 8,
+    "currencyCode": "USD",
+    "status": "ACTIVE",
+    "cancellationReason": null,
+    "cancellationComment": null,
+    "completedOrdersCount": 0,
+    "pausedAt": null,
+    "cancelledAt": null,
+    "expiredAt": null,
+    "attributes": [
+      {
+        "key": "split_source_subscription_id",
+        "value": "30650760"
+      }
+    ],
+    "isPrepaid": false,
+    "isMarkedForCancellation": false,
+    "nextBillingDateEpoch": 1790258700,
+    "chargeOffset": 2,
+    "lastPaymentStatus": "SUCCESS",
+    "lastInventoryAction": null,
+    "deliveryMethod": {
+      "code": "Standard",
+      "title": "Standard"
+    },
+    "billingPolicy": {
+      "maxCycles": null,
+      "minCycles": null,
+      "interval": "MONTH",
+      "intervalCount": 1,
+      "anchorDay": null,
+      "anchorMonth": null,
+      "anchorType": null
+    },
+    "deliveryPolicy": {
+      "interval": "MONTH",
+      "intervalCount": 1
+    },
+    "shippingAddress": {
+      "firstName": "Will",
+      "lastName": "Smith",
+      "phone": "+919994556780",
+      "company": null,
+      "address1": "House 5",
+      "address2": null,
+      "city": "Ithaca",
+      "zip": "14853",
+      "countryCode": "US",
+      "provinceCode": "NY"
+    },
+    "lines": [
+      {
+        "id": 88690513,
+        "productShopifyId": 10172079341875,
+        "variantShopifyId": 53455454142771,
+        "sellingPlanShopifyId": 9603711283,
+        "sellingPlanName": "Deliver every month",
+        "sellingPlanGroupName": "Subscribe for monthly delivery",
+        "sellingPlanGroupMerchantCode": "Subscribe for monthly delivery",
+        "variantTitle": "Varient 111 / White",
+        "productTitle": "Product box",
+        "name": "Product box - Varient 111 / White",
+        "price": "10.50",
+        "basePrice": 15,
+        "discountedPrice": 10.5,
+        "quantity": 1,
+        "sku": null,
+        "isOneTimeAdded": false,
+        "isOneTimeRemoved": false,
+        "bundleTransactionId": null,
+        "loopBundleId": null,
+        "attributes": [],
+        "weightInGrams": 0,
+        "discounts": [],
+        "variantImage": "https://cdn.shopify.com/s/files/1/0981/0798/2131/files/premium-quality-pure-white-product-package-box-with-natural-light-ultra-clear-digital-render-free-photo.jpg?v=1778491911"
+      }
+    ],
+    "customer": {
+      "id": 443497692,
+      "shopifyId": 9732955898163,
+      "email": "vnitdevesh@gmail.com"
+    },
+    "discounts": [],
+    "prepaidCredits": null,
+    "customerPaymentMethodId": 22176578,
+    "billingAddress": {
+      "zip": "32801",
+      "city": "Plumville",
+      "country": "United States",
+      "address1": "house no. 10, abc apartments",
+      "province": "Florida",
+      "countryCode": "US",
+      "provinceCode": "FL"
+    },
+    "isMigrated": false,
+    "paymentMethod": {
+      "id": 22176578,
+      "type": "CustomerCreditCard",
+      "card": {
+        "brand": "bogus",
+        "expiryYear": 30,
+        "expiryMonth": 3,
+        "lastDigits": "1"
+      },
+      "payPal": null,
+      "status": "safe",
+      "source": "Credit card (Primary gateway)",
+      "isRevoked": false
+    }
+  },
+  "code": "SUCCESS",
+  "pageInfo": null
+}
