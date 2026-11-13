@@ -27,7 +27,7 @@ export async function proxy(request: NextRequest) {
   const { data } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC.some((p) => path === p || (p !== "/" && path.startsWith(`${p}/`)));
+  const isPublic = [...PUBLIC, ...PUBLIC_INFO].some((p) => path === p || (p !== "/" && path.startsWith(`${p}/`)));
   if (!data.user && !isPublic) {
     const to = request.nextUrl.clone();
     to.pathname = "/sign-in";
@@ -36,6 +36,9 @@ export async function proxy(request: NextRequest) {
   }
   return response;
 }
+
+// Help and the legal pages: readable by anyone, signed in or not.
+const PUBLIC_INFO = ["/help", "/terms", "/privacy", "/subscription-terms"];
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|icon-|apple-touch-icon|manifest.webmanifest|.*\\.(?:png|svg|jpg|webp)$).*)"],

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyLoopSignature, webhookSecrets, webhookTarget } from "@/lib/loop";
 import { syncSubscription } from "@/lib/loop.server";
+import { sendWelcomeIfDue } from "@/lib/email.server";
 
 // Loop Subscriptions webhook. Every topic is treated as "this subscription changed":
 // verify the signature on the raw body, skip other products' subscriptions, then re-read
@@ -49,6 +50,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.reason }, { status: result.retry ? 503 : 422 });
     }
     console.log("loop_webhook", topic, target.subscriptionId, result.outcome, result.member?.status ?? "");
+    // Welcome email, once per member, the first time she can use the app (never throws).
+    if (result.member) await sendWelcomeIfDue(result.member.email);
     return NextResponse.json({ ok: true, outcome: result.outcome });
   } catch (e) {
     console.error("loop_webhook_failed exception", topic, target.subscriptionId, delivery, (e as Error).message);
