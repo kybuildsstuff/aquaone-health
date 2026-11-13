@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BackButton, Card, Check, Drop, LightButton, PrimaryButton, Progress, Segmented } from "@/components/ui";
-import { CONDITIONS, type OnboardingInput } from "@/lib/onboarding";
+import { CONDITIONS, type OnboardingInput, saveErrorMessage } from "@/lib/onboarding";
 import AddToHomeScreen, { shouldOfferAddToHomeScreen } from "@/components/AddToHomeScreen";
 
 type Step = "welcome" | "name" | "basics" | "health" | "food" | "reminders" | "ready" | "home";
@@ -59,7 +59,7 @@ export default function OnboardingFlow() {
     if (res?.ok) return setStep("ready");
     const body = res ? await res.json().catch(() => ({})) : {};
     if (body.error === "already_onboarded") return router.replace("/today");
-    setError("We couldn't save that just now. Check your connection and try again.");
+    setError(saveErrorMessage(res ? res.status : null, body.error));
   }
 
   const conditionText = useMemo(() => {
@@ -285,13 +285,6 @@ export default function OnboardingFlow() {
                   None that I know of
                 </button>
               </div>
-              <input
-                value={form.otherCondition}
-                onChange={(e) => set("otherCondition", e.target.value)}
-                maxLength={80}
-                placeholder="Something else? Type it here"
-                className="h-12 rounded-[14px] border-[1.5px] border-line bg-white px-4 text-[15px] outline-none focus:border-blue"
-              />
               <div className="flex items-start gap-3 rounded-2xl bg-lilac-soft px-4 py-3.5">
                 <svg width="18" height="20" viewBox="0 0 24 26" className="shrink-0" aria-hidden>
                   <path d="M12 2L3 6v6c0 6 4 10.5 9 12 5-1.5 9-6 9-12V6l-9-4z" fill="#5369EE" />

@@ -9,13 +9,18 @@ export async function POST(request: Request) {
   const supabase = await supabaseServer();
   const { data: auth } = await supabase.auth.getUser();
   const user = auth.user;
-  if (!user?.email) return NextResponse.json({ error: "signed_out" }, { status: 401 });
+  if (!user?.email) {
+    console.error("onboarding_failed signed_out");
+    return NextResponse.json({ error: "signed_out" }, { status: 401 });
+  }
   if (!membershipAllows(await findMember(user.email)).allowed) {
+    console.error("onboarding_failed not_member", user.id);
     return NextResponse.json({ error: "not_member" }, { status: 403 });
   }
 
   const parsed = onboardingSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
+    console.error("onboarding_failed invalid", user.id, JSON.stringify(parsed.error.issues.map((i) => [i.path.join("."), i.message])));
     return NextResponse.json({ error: "invalid", issues: parsed.error.issues.map((i) => i.path.join(".")) }, { status: 400 });
   }
   const o = parsed.data;
@@ -24,7 +29,10 @@ export async function POST(request: Request) {
   if (count && count > 0) return NextResponse.json({ error: "already_onboarded", next: "/today" }, { status: 409 });
 
   const { data: cat, error: catError } = await supabase.from("cats").insert(catRow(o, user.id)).select("id").single();
-  if (catError) return NextResponse.json({ error: "save_failed" }, { status: 500 });
+  if (catError) {
+    console.error("onboarding_failed cat_insert", user.id, catError.message);
+    return NextResponse.json({ error: "save_failed" }, { status: 500 });
+  }
 
   const { error: prefError } = await supabase.from("reminder_prefs").upsert({
     user_id: user.id,
@@ -33,7 +41,10 @@ export async function POST(request: Request) {
     checkin_time: o.checkinTime,
     timezone: o.timezone,
   });
-  if (prefError) return NextResponse.json({ error: "save_failed" }, { status: 500 });
+  if (prefError) {
+    console.error("onboarding_failed prefs_upsert", user.id, prefError.message);
+    return NextResponse.json({ error: "save_failed" }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, catId: cat.id });
 }

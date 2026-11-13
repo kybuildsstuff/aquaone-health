@@ -58,3 +58,12 @@ export function catRow(o: Onboarding, ownerId: string) {
     vet_phone: o.vetPhone || null,
   };
 }
+
+// What she sees when saving fails, by the server's answer. Only a real network failure blames the connection.
+export function saveErrorMessage(status: number | null, error?: string): string {
+  if (status === null) return "We couldn't reach AquaOne Health. Check your connection and try again.";
+  if (status === 401 || error === "signed_out") return "You've been signed out. Sign in again and we'll pick up where you left off.";
+  if (status === 403) return "We couldn't find an active membership for this email.";
+  if (status === 400) return "One of the answers didn't look right. Go back and check them, then try again.";
+  return "Something went wrong on our side. Try again in a moment.";
+}

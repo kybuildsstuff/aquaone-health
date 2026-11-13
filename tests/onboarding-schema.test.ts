@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { catRow, onboardingSchema, weightInLb } from "../src/lib/onboarding";
+import { catRow, onboardingSchema, saveErrorMessage, weightInLb } from "../src/lib/onboarding";
 
 const valid = {
   name: " Milo ",
@@ -53,5 +53,15 @@ describe("onboarding payload", () => {
     const r = catRow(o, "user-1");
     expect(r).toMatchObject({ owner_id: "user-1", name: "Milo", age_years: 11, start_weight_lb: 10.58, vet_phone: null, vet_name: "Dr. Lane" });
     expect(r.conditions).toEqual(["sensitive_stomach", "stiff_joints", "other:Heart murmur"]);
+  });
+});
+
+describe("save error message", () => {
+  it("blames the connection only when the request never reached us", () => {
+    expect(saveErrorMessage(null)).toMatch(/connection/);
+    for (const s of [400, 401, 403, 500]) expect(saveErrorMessage(s)).not.toMatch(/connection/);
+  });
+  it("tells a signed-out owner to sign in again", () => {
+    expect(saveErrorMessage(401, "signed_out")).toMatch(/sign in again/i);
   });
 });
