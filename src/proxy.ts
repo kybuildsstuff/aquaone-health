@@ -5,7 +5,8 @@ import { createServerClient } from "@supabase/ssr";
 // visitors on app routes to /sign-in. Membership itself is checked in the
 // (app) layout, which can query the database; this is only the optimistic check.
 // API routes check sign-in themselves and answer 401, so the proxy lets them through.
-const PUBLIC = ["/", "/sign-in", "/check-email", "/membership-ended", "/auth", "/api"];
+// "/r" is the public, read-only vet report behind a share link (one cat per unguessable token).
+const PUBLIC = ["/", "/sign-in", "/check-email", "/membership-ended", "/auth", "/api", "/r"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
