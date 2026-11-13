@@ -7,7 +7,8 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "AquaOne Health",
   description: "Your cat's daily health companion, from PureStream.",
-  appleWebApp: { capable: true, title: "AquaOne Health", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "AquaOne", statusBarStyle: "default" },
+  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
