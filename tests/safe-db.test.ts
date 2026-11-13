@@ -101,6 +101,22 @@ describe("search", () => {
     expect(pickMatch(await searchItems(a.client, "qwxzv")).kind).toBe("none");
   });
 
+  it("a name with extra words still opens the item it names (photo of a minoxidil bottle)", async () => {
+    // Found by Ky on 13 Nov: the photo read "minoxidil topical solution 5%" and the screen said
+    // "not on our list" although Minoxidil is on it as an emergency.
+    for (const [q, name] of [
+      ["minoxidil topical solution 5%", "Minoxidil"],
+      ["Rogaine minoxidil foam for men", "Minoxidil"],
+      ["advil liqui-gels 200 mg", "Ibuprofen"],
+      ["peace lily plant", "Peace Lily"],
+    ]) {
+      const pick = pickMatch(await searchItems(a.client, q), q);
+      expect(pick, q).toMatchObject({ kind: "item", match: { name } });
+    }
+    expect(pickMatch(await searchItems(a.client, "rubber plant"), "rubber plant").kind).toBe("ambiguous");
+    expect(pickMatch(await searchItems(a.client, "blue ceramic plant pot"), "blue ceramic plant pot").kind).not.toBe("item");
+  });
+
   it("lilies come back as emergencies", async () => {
     for (const q of ["lily", "lilies", "tiger lily", "daylily"]) expect((await top(q))?.severity, q).toBe("emergency");
   });

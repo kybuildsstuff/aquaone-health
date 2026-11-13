@@ -78,7 +78,7 @@ export default function SafeSearch({ children }: { children: React.ReactNode }) 
       setSearchError(true);
       return;
     }
-    const pick = pickMatch(matches);
+    const pick = pickMatch(matches, query);
     // Equally good matches with different answers: show them and let her pick.
     if (pick.kind === "ambiguous") return setFound({ query, results: matches });
     void open(pick.kind === "item" ? pick.match.id : null);

@@ -31,7 +31,7 @@ const SYSTEM = `You identify the single main item in a photo taken by a cat owne
 The item is usually a house or garden plant, a food, a household product or a medicine.
 Return:
 - found: false if no identifiable plant, food, product or medicine is visible.
-- name: the most common everyday name (for a plant, its common name such as "Peace Lily" or "Spider Plant"; for a product, its generic type such as "bleach" or "ibuprofen", read from the label if you can).
+- name: the most common everyday name (for a plant, its common name such as "Peace Lily" or "Spider Plant"; for a medicine or product, the generic active ingredient or type only, such as "minoxidil", "ibuprofen" or "bleach", read from the label if you can, without brand, strength or form like "5%" or "topical solution"; put the brand name in alternatives).
 - confidence: how sure you are of that name.
 - alternatives: up to 3 other names it could be (other common names, or look-alikes), most likely first.
 Do not say whether it is safe or toxic. Do not add advice. If unsure, say so with a low confidence rather than guessing.`;

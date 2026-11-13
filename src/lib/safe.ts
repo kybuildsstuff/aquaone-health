@@ -29,9 +29,26 @@ export const isConfident = (m: SafetyMatch | undefined): m is SafetyMatch => Boo
 
 // Which match to open straight away, if any. "ambiguous" means the top matches are about equally
 // good but give different answers (e.g. "rubber plant": one safe, one toxic), so she must pick.
-export function pickMatch(matches: SafetyMatch[]): { kind: "item"; match: SafetyMatch } | { kind: "ambiguous" } | { kind: "none" } {
+const normalize = (s: string) => ` ${s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+
+// A query that names an item in whole words, with extra words around it ("minoxidil topical
+// solution 5%", "advil liqui-gels 200 mg"), counts as that item even when the fuzzy score is low.
+// The longest named term wins, so "peace lily plant" opens Peace Lily, not Lily.
+function namedInQuery(matches: SafetyMatch[], query: string) {
+  const q = normalize(query);
+  const hits = matches
+    .map((m) => ({ m, len: Math.max(...[m.matched, m.name].map((t) => (t && t.trim().length >= 4 && q.includes(normalize(t)) ? t.trim().length : 0))) }))
+    .filter((h) => h.len > 0)
+    .sort((x, y) => y.len - x.len);
+  if (!hits.length) return null;
+  const tied = hits.filter((h) => h.len === hits[0].len);
+  if (tied.some((h) => h.m.severity !== hits[0].m.severity)) return { kind: "ambiguous" as const };
+  return { kind: "item" as const, match: hits[0].m };
+}
+
+export function pickMatch(matches: SafetyMatch[], query?: string): { kind: "item"; match: SafetyMatch } | { kind: "ambiguous" } | { kind: "none" } {
   const [top, ...rest] = matches;
-  if (!isConfident(top)) return { kind: "none" };
+  if (!isConfident(top)) return (query && namedInQuery(matches, query)) || { kind: "none" };
   const close = rest.filter((m) => m.score >= top.score - 0.05);
   if (close.some((m) => m.severity !== top.severity)) return { kind: "ambiguous" };
   return { kind: "item", match: top };

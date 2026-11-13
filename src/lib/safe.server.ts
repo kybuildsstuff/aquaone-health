@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ActionResult } from "@/lib/app-data.server";
 import type { Pronoun } from "@/lib/cat";
-import { pickMatch, type PhotoType, type SafetyCategory, type SafetyItem, type SafetyMatch, type Severity } from "@/lib/safe";
+import { CONFIDENT_SCORE, pickMatch, type PhotoType, type SafetyCategory, type SafetyItem, type SafetyMatch, type Severity } from "@/lib/safe";
 import type { Identification, Identifier } from "@/lib/safe-vision.server";
 
 // Everything here runs with HER client, so row-level security applies: the list is readable by
@@ -20,10 +20,26 @@ export async function getSafeCat(supabase: SupabaseClient): Promise<SafeCat | nu
   return (data as SafeCat | null) ?? null;
 }
 
-export async function searchItems(supabase: SupabaseClient, q: string, max = 8): Promise<SafetyMatch[]> {
+async function searchOnce(supabase: SupabaseClient, q: string, max: number): Promise<SafetyMatch[]> {
   const { data, error } = await supabase.rpc("search_safety_items", { q, max_results: max });
   if (error) throw new Error(`search_safety_items failed: ${error.message}`);
   return ((data ?? []) as SafetyMatch[]).map((m) => ({ ...m, score: Number(m.score) }));
+}
+
+// The whole query first. When that finds nothing confident and the query has several words (a
+// label read from a photo, "minoxidil topical solution 5%"), each word and word pair is searched
+// too, so an item named inside a longer phrase is still found. Results keep the whole-query order;
+// extra hits are added after it. pickMatch(results, q) then decides whether the phrase names one.
+export async function searchItems(supabase: SupabaseClient, q: string, max = 8): Promise<SafetyMatch[]> {
+  const whole = await searchOnce(supabase, q, max);
+  const words = q.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter((w) => w.length >= 4 && !/^\d/.test(w)).slice(0, 6);
+  if (whole[0]?.score >= CONFIDENT_SCORE || words.length < 1 || (words.length === 1 && words[0] === q.trim().toLowerCase())) return whole;
+  const parts = [...words, ...words.slice(1).map((w, i) => `${words[i]} ${w}`)];
+  const extra = (await Promise.all(parts.map((part) => searchOnce(supabase, part, 3)))).flat();
+  const seen = new Set(whole.map((m) => m.id));
+  const merged = [...whole];
+  for (const m of extra.sort((a, b) => b.score - a.score)) if (!seen.has(m.id)) { seen.add(m.id); merged.push(m); }
+  return merged.slice(0, Math.max(max, whole.length));
 }
 
 const ITEM_COLUMNS = "id, name, aliases, category, severity, summary, what_to_do, source, scientific_name";
@@ -97,10 +113,10 @@ export async function photoLookup(
   let itemId: string | null = null;
   const candidates = new Map<string, { id: string; name: string; severity: Severity }>();
   for (const [i, name] of names.entries()) {
-    const matches = await searchItems(supabase, name, 3);
-    const pick = pickMatch(matches);
+    const matches = await searchItems(supabase, name, 8);
+    const pick = pickMatch(matches, name);
     if (i === 0 && identified.confidence !== "low" && pick.kind === "item") itemId = pick.match.id;
-    for (const m of matches) if (m.score >= 0.45 && candidates.size < 4) candidates.set(m.id, { id: m.id, name: m.name, severity: m.severity });
+    for (const m of matches.slice(0, 3)) if (m.score >= 0.45 && candidates.size < 4) candidates.set(m.id, { id: m.id, name: m.name, severity: m.severity });
   }
   if (itemId) candidates.delete(itemId);
 
