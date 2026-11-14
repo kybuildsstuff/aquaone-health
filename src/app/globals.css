@@ -19,3 +19,8 @@
 
 html, body { background: var(--color-paper); color: var(--color-navy); }
 body { font-family: var(--font-inter), system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+/* Screens fade in on arrival (tab switches, loading outlines). Off for reduced motion. */
+@keyframes page-in { from { opacity: 0; } to { opacity: 1; } }
+.page-in { animation: page-in 180ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { .page-in { animation: none; } }

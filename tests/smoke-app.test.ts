@@ -8,6 +8,7 @@ import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
+import { redirectsTo } from "./support/streamed";
 
 config({ path: ".env.local", quiet: true });
 const APP = process.env.APP_URL?.replace(/\/$/, "");
@@ -63,9 +64,7 @@ describe.skipIf(!APP)(`app smoke (${APP})`, () => {
   it("before onboarding: a check-in is refused with no_cat and Today sends her to onboarding", async () => {
     const r = await post("/api/check-ins", { drinking: "normal" });
     expect([r.status, (await r.json()).error]).toEqual([409, "no_cat"]);
-    const today = await call("/today");
-    expect(today.status).toBe(307);
-    expect(today.headers.get("location")).toMatch(/\/onboarding$/);
+    expect(await redirectsTo(await call("/today"), "/onboarding")).toBe(true);
   });
 
   it("onboards through the real route", async () => {

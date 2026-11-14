@@ -8,6 +8,7 @@ import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
+import { isNotFound } from "./support/streamed";
 
 config({ path: ".env.local", quiet: true });
 const APP = process.env.APP_URL?.replace(/\/$/, "");
@@ -113,6 +114,6 @@ describe.skipIf(!APP)(`Is it safe? smoke (${APP})`, () => {
 
   it("the category lists open", async () => {
     for (const c of ["plant", "food", "household", "medicine"]) expect((await call(`/safe/browse/${c}`)).status, c).toBe(200);
-    expect((await call("/safe/browse/nonsense")).status).toBe(404);
+    expect(await isNotFound(await call("/safe/browse/nonsense"))).toBe(true);
   });
 });

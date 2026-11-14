@@ -24,11 +24,12 @@ export async function proxy(request: NextRequest) {
       },
     },
   });
-  const { data } = await supabase.auth.getUser();
+  // getClaims checks the signed session locally (the project signs with ES256), no network call.
+  const { data } = await supabase.auth.getClaims();
 
   const path = request.nextUrl.pathname;
   const isPublic = [...PUBLIC, ...PUBLIC_INFO].some((p) => path === p || (p !== "/" && path.startsWith(`${p}/`)));
-  if (!data.user && !isPublic) {
+  if (!data?.claims && !isPublic) {
     const to = request.nextUrl.clone();
     to.pathname = "/sign-in";
     to.search = "";

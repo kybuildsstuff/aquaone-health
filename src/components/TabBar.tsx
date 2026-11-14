@@ -55,7 +55,7 @@ export default function TabBar() {
 export function TabScreen({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col pb-36">
-      {children}
+      <div className="page-in flex flex-1 flex-col">{children}</div>
       <TabBar />
     </div>
   );

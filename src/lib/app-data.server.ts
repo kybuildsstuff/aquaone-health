@@ -31,19 +31,23 @@ const fail = (status: number, error: string, detail?: string) => ({ ok: false as
 
 // Her cat (one per member in version 1), her timezone and her local "today".
 export async function getContext(supabase: SupabaseClient, at: Date = new Date()): Promise<Ctx | null> {
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return null;
-  const { data: cat, error } = await supabase
-    .from("cats")
-    .select("id, name, pronoun, age_years, lives, food, conditions, vet_name, vet_phone, created_at")
-    .order("created_at")
-    .limit(1)
-    .maybeSingle();
+  // getClaims verifies the signed session locally (ES256), so no round trip to Supabase Auth.
+  const { data: auth } = await supabase.auth.getClaims();
+  const userId = auth?.claims.sub;
+  if (!userId) return null;
+  const [{ data: cat, error }, { data: prefs }] = await Promise.all([
+    supabase
+      .from("cats")
+      .select("id, name, pronoun, age_years, lives, food, conditions, vet_name, vet_phone, created_at")
+      .order("created_at")
+      .limit(1)
+      .maybeSingle(),
+    supabase.from("reminder_prefs").select("timezone").eq("user_id", userId).maybeSingle(),
+  ]);
   if (error) throw new Error(`cat lookup failed: ${error.message}`);
   if (!cat) return null;
-  const { data: prefs } = await supabase.from("reminder_prefs").select("timezone").eq("user_id", auth.user.id).maybeSingle();
   const tz = safeTimezone(prefs?.timezone);
-  return { userId: auth.user.id, cat: cat as Cat, tz, today: localDate(tz, at) };
+  return { userId, cat: cat as Cat, tz, today: localDate(tz, at) };
 }
 
 export async function kidneyWatchStatus(supabase: SupabaseClient, catId: string): Promise<KwStatus> {

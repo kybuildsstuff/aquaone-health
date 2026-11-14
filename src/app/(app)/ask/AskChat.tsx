@@ -115,7 +115,7 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-paper">
+    <div className="page-in flex h-dvh flex-col bg-paper">
       <header className="flex shrink-0 items-center gap-3 border-b border-[#EFEDE9] px-5 pt-[max(16px,env(safe-area-inset-top))] pb-3.5">
         <BackLink href="/today" />
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue">

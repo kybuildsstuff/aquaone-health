@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "AquaOne Health",
   description: "Your cat's daily health companion, from PureStream.",
   appleWebApp: { capable: true, title: "AquaOne", statusBarStyle: "default" },
-  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  icons: { icon: "/icon-192.png?v=2", apple: "/apple-touch-icon.png?v=2" },
 };
 
 export const viewport: Viewport = {
