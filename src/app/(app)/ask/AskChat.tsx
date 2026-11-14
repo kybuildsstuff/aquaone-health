@@ -4,6 +4,8 @@ import { Drop } from "@/components/ui";
 import { BackLink } from "@/components/watch";
 import { EMERGENCY_VET_MAPS_URL, telHref, vetLabel, words, type Pronoun } from "@/lib/cat";
 import {
+  withQuestion,
+  type ChatItem,
   MAX_QUESTION_CHARS,
   POISON_LINE,
   URGENT_FOLLOW_UP,
@@ -15,7 +17,7 @@ import {
   type FlagId,
 } from "@/lib/ask";
 
-export type ChatItem = { id: string; role: "user" | "assistant"; text: string; at: string; flags: FlagId[]; pending?: boolean };
+export type { ChatItem };
 type Cat = { name: string; pronoun: Pronoun; vetName: string | null; vetPhone: string | null };
 
 // The Ask screen from the Paper designs ("11 Ask" and "12 Ask · urgent").
@@ -49,7 +51,7 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
     setDraft("");
     const now = new Date().toISOString();
     const pendingId = `pending-${now}`;
-    setItems((xs) => [...xs, { id: `q-${now}`, role: "user", text: q, at: now, flags: [] }]);
+    setItems((xs) => withQuestion(xs, q, now));
     const update = (patch: Partial<ChatItem>) =>
       setItems((xs) => {
         const has = xs.some((x) => x.id === pendingId);
@@ -63,7 +65,7 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
     } catch {
       setError(askErrorMessage(null, undefined, cat.name));
       setDraft(q);
-      setItems((xs) => xs.filter((x) => x.id !== `q-${now}`));
+      setItems((xs) => xs.filter((x) => x.id !== `q-${now}` && x.id !== pendingId));
       setBusy(false);
       return;
     }
@@ -72,7 +74,7 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
       setError(askErrorMessage(res.status, body.error, cat.name));
       if (body.error === "daily_cap") setRemaining(0);
       else setDraft(q);
-      setItems((xs) => xs.filter((x) => x.id !== `q-${now}`));
+      setItems((xs) => xs.filter((x) => x.id !== `q-${now}` && x.id !== pendingId));
       setBusy(false);
       return;
     }

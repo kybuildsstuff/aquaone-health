@@ -298,3 +298,15 @@ export function askErrorMessage(status: number | null, error: string | undefined
   if (status === 400) return "That didn't look right. Try asking again.";
   return "Something went wrong on our side. Try again in a moment.";
 }
+
+export type ChatItem = { id: string; role: "user" | "assistant"; text: string; at: string; flags: FlagId[]; pending?: boolean };
+
+// Sending a question: her bubble plus the typing dots (a pending answer), together, so the
+// dots show for the whole wait. Ids are q-<at> and pending-<at>; the answer replaces the latter.
+export function withQuestion(items: ChatItem[], question: string, at: string): ChatItem[] {
+  return [
+    ...items,
+    { id: `q-${at}`, role: "user", text: question, at, flags: [] },
+    { id: `pending-${at}`, role: "assistant", text: "", at, flags: [], pending: true },
+  ];
+}

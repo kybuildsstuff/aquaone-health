@@ -1,7 +1,7 @@
 // Ask's safety rules in code (decision 5), without the model: the red-flag detector on her
 // words, the after-model guard, the answer layout and the cap's local-midnight boundary.
 import { describe, expect, it } from "vitest";
-import { detectRedFlags, guardAnswer, parseAnswer, primaryFlag, takeUrgentMarker, urgentCopy, type FlagId } from "../src/lib/ask";
+import { detectRedFlags, guardAnswer, parseAnswer, primaryFlag, takeUrgentMarker, urgentCopy, withQuestion, type FlagId } from "../src/lib/ask";
 import { localDate } from "../src/lib/dates";
 
 // The localMidnightUtc helper lives in a server-only module; import it through the alias.
@@ -191,5 +191,16 @@ describe("the daily cap resets at her midnight", () => {
       expect(localDate(tz, m)).toBe(localDate(tz, at));
       expect(localDate(tz, new Date(m.getTime() - 1000))).not.toBe(localDate(tz, at));
     }
+  });
+});
+
+// Found by hand 14 Nov: the typing dots never showed, because the pending answer was only
+// added when the first stream event arrived, and a normal answer arrives as one event.
+describe("sending a question", () => {
+  it("shows the typing dots straight away, after her question", () => {
+    const at = "2026-11-14T10:00:00.000Z";
+    const items = withQuestion([], "How much should she drink?", at);
+    expect(items.map((x) => [x.role, x.pending ?? false])).toEqual([["user", false], ["assistant", true]]);
+    expect(items[1].id).toBe(`pending-${at}`);
   });
 });
