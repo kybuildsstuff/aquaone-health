@@ -299,7 +299,8 @@ export function askErrorMessage(status: number | null, error: string | undefined
   return "Something went wrong on our side. Try again in a moment.";
 }
 
-export type ChatItem = { id: string; role: "user" | "assistant"; text: string; at: string; flags: FlagId[]; pending?: boolean };
+// fresh: an answer that arrived on this screen just now, so it is typed out rather than shown whole.
+export type ChatItem = { id: string; role: "user" | "assistant"; text: string; at: string; flags: FlagId[]; pending?: boolean; fresh?: boolean };
 
 // Sending a question: her bubble plus the typing dots (a pending answer), together, so the
 // dots show for the whole wait. Ids are q-<at> and pending-<at>; the answer replaces the latter.
@@ -310,3 +311,31 @@ export function withQuestion(items: ChatItem[], question: string, at: string): C
     { id: `pending-${at}`, role: "assistant", text: "", at, flags: [], pending: true },
   ];
 }
+
+// --- Typing out a checked answer ---------------------------------------------------------
+// The whole answer has passed the after-model guard before any of it reaches the phone
+// (decision 5); the phone then reveals it a few words at a time so it reads like typing.
+
+const WORD = /\S+/g;
+export const wordCount = (text: string): number => text.match(WORD)?.length ?? 0;
+
+// The first n words, line breaks kept. A **bold** pair cut in half is closed so the
+// asterisks never flash on screen.
+export function revealWords(text: string, n: number): string {
+  if (n <= 0) return "";
+  let seen = 0;
+  let end = text.length;
+  for (const m of text.matchAll(WORD)) {
+    seen += 1;
+    if (seen === n) {
+      end = m.index + m[0].length;
+      break;
+    }
+  }
+  const shown = text.slice(0, end);
+  return (shown.match(/\*\*/g)?.length ?? 0) % 2 ? `${shown}**` : shown;
+}
+
+// How long the reveal takes: about 25ms a word, never under 0.6s or over 2s, so a long
+// answer speeds up rather than keeping her waiting.
+export const revealMs = (words: number): number => Math.min(2000, Math.max(600, words * 25));

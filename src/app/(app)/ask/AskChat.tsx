@@ -4,6 +4,9 @@ import { Drop } from "@/components/ui";
 import { BackLink } from "@/components/watch";
 import { EMERGENCY_VET_MAPS_URL, telHref, vetLabel, words, type Pronoun } from "@/lib/cat";
 import {
+  revealMs,
+  revealWords,
+  wordCount,
   withQuestion,
   type ChatItem,
   MAX_QUESTION_CHARS,
@@ -27,17 +30,19 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remaining, setRemaining] = useState(initialRemaining);
+  const [revealing, setRevealing] = useState<string | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const w = words(cat.pronoun);
 
-  useEffect(() => {
+  const toBottom = () => {
     const el = scroller.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [items, busy]);
+  };
+  useEffect(toBottom, [items, busy]);
 
   const last = items[items.length - 1];
   const chips =
-    items.length === 0 ? [] : last?.role === "assistant" && !last.pending ? (last.flags.length ? [URGENT_FOLLOW_UP] : parseAnswer(last.text).followUps) : [];
+    items.length === 0 || (last && revealing === last.id) ? [] : last?.role === "assistant" && !last.pending ? (last.flags.length ? [URGENT_FOLLOW_UP] : parseAnswer(last.text).followUps) : [];
 
   async function ask(question: string) {
     const q = question.trim();
@@ -99,7 +104,8 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
             update({ flags: e.flags });
           } else if (e.type === "answer") {
             answered = true;
-            update({ id: e.id, text: e.text, flags: e.flags, pending: false });
+            update({ id: e.id, text: e.text, flags: e.flags, pending: false, fresh: true });
+            setRevealing(e.id);
             setRemaining(e.remaining);
           } else if (e.type === "error") {
             if (sawUrgent) update({ text: "Please go now. I'll be here when you're back.", pending: false });
@@ -160,7 +166,13 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
                 {timeLabel(m.at, tz)}
               </p>
             ) : null}
-            {m.role === "user" ? <UserBubble text={m.text} /> : <AssistantBlock item={m} cat={cat} />}
+            {m.role === "user" ? (
+              <UserBubble text={m.text} />
+            ) : m.fresh && !m.pending ? (
+              <TypedAnswer item={m} cat={cat} onGrow={toBottom} onDone={() => setRevealing((r) => (r === m.id ? null : r))} />
+            ) : (
+              <AssistantBlock item={m} cat={cat} />
+            )}
           </div>
         ))}
       </div>
@@ -222,6 +234,41 @@ function UserBubble({ text }: { text: string }) {
   return (
     <div className="flex justify-end">
       <p className="max-w-[78%] rounded-t-[20px] rounded-br-md rounded-bl-[20px] bg-navy px-4 py-3 text-base leading-5.5 whitespace-pre-wrap text-white">{text}</p>
+    </div>
+  );
+}
+
+// A checked answer typed out a few words at a time (see revealWords). A tap shows it all;
+// with Reduce Motion on it shows whole at once.
+function TypedAnswer({ item, cat, onGrow, onDone }: { item: ChatItem; cat: Cat; onGrow: () => void; onDone: () => void }) {
+  const total = wordCount(item.text);
+  // Only ever mounted in the browser, for an answer that just arrived.
+  const [still] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const [shown, setShown] = useState(still ? total : 0);
+  const finished = shown >= total;
+
+  useEffect(() => {
+    if (still) return;
+    const ms = revealMs(total);
+    const start = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const n = Math.min(total, Math.ceil((total * (now - start)) / ms));
+      setShown(n);
+      if (n < total) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [total, still]);
+
+  useEffect(() => {
+    onGrow();
+    if (finished) onDone();
+  }, [shown, finished]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div onClick={() => setShown(total)} aria-busy={!finished}>
+      <AssistantBlock item={{ ...item, text: finished ? item.text : revealWords(item.text, shown) }} cat={cat} />
     </div>
   );
 }

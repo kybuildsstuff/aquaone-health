@@ -1,7 +1,7 @@
 // Ask's safety rules in code (decision 5), without the model: the red-flag detector on her
 // words, the after-model guard, the answer layout and the cap's local-midnight boundary.
 import { describe, expect, it } from "vitest";
-import { detectRedFlags, guardAnswer, parseAnswer, primaryFlag, takeUrgentMarker, urgentCopy, withQuestion, type FlagId } from "../src/lib/ask";
+import { detectRedFlags, guardAnswer, parseAnswer, primaryFlag, takeUrgentMarker, urgentCopy, withQuestion, revealWords, revealMs, wordCount, type FlagId } from "../src/lib/ask";
 import { localDate } from "../src/lib/dates";
 
 // The localMidnightUtc helper lives in a server-only module; import it through the alias.
@@ -202,5 +202,33 @@ describe("sending a question", () => {
     const items = withQuestion([], "How much should she drink?", at);
     expect(items.map((x) => [x.role, x.pending ?? false])).toEqual([["user", false], ["assistant", true]]);
     expect(items[1].id).toBe(`pending-${at}`);
+  });
+});
+
+describe("typing out a checked answer", () => {
+  const answer = "Cats need about **50 ml per kg** a day.\n\nWhat I'd do\n1. Weigh her.\n2. Log her drinking.\n>> How do I get her to drink more?";
+
+  it("reveals whole words in order and ends on exactly the full answer", () => {
+    const total = wordCount(answer);
+    let prev = "";
+    for (let n = 1; n <= total; n++) {
+      const shown = revealWords(answer, n).replace(/\*\*$/, "");
+      expect(answer.startsWith(shown.replace(/\*\*$/, "")) || answer.startsWith(shown)).toBe(true);
+      expect(shown.length).toBeGreaterThanOrEqual(prev.length);
+      prev = shown;
+    }
+    expect(revealWords(answer, total)).toBe(answer);
+    expect(revealWords(answer, 0)).toBe("");
+  });
+
+  it("never leaves a bold marker open, so asterisks never flash", () => {
+    for (let n = 1; n <= wordCount(answer); n++) expect((revealWords(answer, n).match(/\*\*/g)?.length ?? 0) % 2).toBe(0);
+  });
+
+  it("keeps the reveal between 0.6 and 2 seconds whatever the length", () => {
+    for (const w of [1, 10, 40, 80, 400]) {
+      expect(revealMs(w)).toBeGreaterThanOrEqual(600);
+      expect(revealMs(w)).toBeLessThanOrEqual(2000);
+    }
   });
 });
