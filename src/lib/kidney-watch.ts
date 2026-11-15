@@ -14,6 +14,9 @@ export type KwStatus = {
   less_in_last_7: number;
   weight_change_pct: number | null;
   latest_breaths: number | null;
+  // Check-ins in the last 14 days; lapsed = she had a baseline, then stopped checking in (audit, 15 Nov).
+  recent_checkins: number;
+  lapsed: boolean;
 };
 
 export const LEARNING_CHECKINS = 7;
@@ -36,6 +39,8 @@ export function toKwStatus(row: Record<string, unknown> | null | undefined): KwS
     less_in_last_7: Number(row?.less_in_last_7 ?? 0),
     weight_change_pct: row?.weight_change_pct == null ? null : Number(row.weight_change_pct),
     latest_breaths: row?.latest_breaths == null ? null : Number(row.latest_breaths),
+    recent_checkins: Number(row?.recent_checkins ?? row?.checkins_total ?? 0),
+    lapsed: Boolean(row?.lapsed),
   };
 }
 

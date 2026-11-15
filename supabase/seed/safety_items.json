@@ -1256,13 +1256,20 @@
  {
   "name": "Cannabis",
   "aliases": [
-   "marijuana",
    "weed",
    "thc",
    "edibles",
    "pot brownies",
-   "joint",
-   "gummies"
+   "delta 9 thc",
+   "delta-9 thc",
+   "delta 8 thc",
+   "delta-8 thc",
+   "delta 10 thc",
+   "thc distillate",
+   "thc gummies",
+   "cannabis gummies",
+   "thc edibles",
+   "tetrahydrocannabinol"
   ],
   "scientific_name": null,
   "category": "household",
@@ -1450,7 +1457,12 @@
    "canine flea treatment",
    "flea treatment for dogs",
    "dog tick treatment",
-   "dog flea shampoo"
+   "dog flea shampoo",
+   "k9 advantix",
+   "advantix",
+   "advantix ii",
+   "vectra 3d",
+   "frontline tritak for dogs"
   ],
   "scientific_name": null,
   "category": "household",
@@ -1502,7 +1514,23 @@
    "peppermint extract oil",
    "thyme oil",
    "oregano oil",
-   "bergamot oil"
+   "bergamot oil",
+   "lavandula angustifolia",
+   "lavandula angustifolia oil",
+   "mentha piperita",
+   "mentha piperita oil",
+   "eucalyptus globulus",
+   "eucalyptus globulus oil",
+   "citrus limon peel oil",
+   "citrus aurantium dulcis peel oil",
+   "cinnamomum zeylanicum",
+   "syzygium aromaticum",
+   "eugenia caryophyllus",
+   "rosmarinus officinalis leaf oil",
+   "pelargonium graveolens",
+   "cananga odorata",
+   "mentha arvensis",
+   "cymbopogon"
   ],
   "scientific_name": null,
   "category": "household",
@@ -2105,7 +2133,10 @@
   "aliases": [
    "melaleuca oil",
    "tea tree",
-   "tea tree shampoo"
+   "tea tree shampoo",
+   "melaleuca alternifolia",
+   "melaleuca alternifolia leaf oil",
+   "melaleuca alternifolia oil"
   ],
   "scientific_name": null,
   "category": "household",
@@ -2198,7 +2229,8 @@
    "muscle rub",
    "deep heat",
    "sports rub",
-   "liniment"
+   "liniment",
+   "gaultheria procumbens"
   ],
   "scientific_name": null,
   "category": "household",
@@ -6101,7 +6133,6 @@
   "aliases": [
    "Daisy",
    "Mum",
-   "many varieties",
    "Chrysanthemum spp"
   ],
   "scientific_name": "Chrysanthemum spp.",
@@ -7025,7 +7056,6 @@
  {
   "name": "Dahlia",
   "aliases": [
-   "Many varieties",
    "Dahlia species"
   ],
   "scientific_name": "Dahlia species",
@@ -7807,7 +7837,6 @@
  {
   "name": "Eucalyptus",
   "aliases": [
-   "Many cultivars",
    "Eucalyptus species"
   ],
   "scientific_name": "Eucalyptus species",
@@ -8543,7 +8572,6 @@
  {
   "name": "Geranium",
   "aliases": [
-   "Many cultivars",
    "Pelargonium species"
   ],
   "scientific_name": "Pelargonium species",
@@ -8774,7 +8802,6 @@
  {
   "name": "Gladiola",
   "aliases": [
-   "Many cultivars",
    "Gladiolus species"
   ],
   "scientific_name": "Gladiolus species",
@@ -9292,7 +9319,6 @@
  {
   "name": "Haworthia",
   "aliases": [
-   "Many cultivars",
    "Haworthia species"
   ],
   "scientific_name": "Haworthia species",
@@ -9423,7 +9449,6 @@
  {
   "name": "Hemlock Tree",
   "aliases": [
-   "Many varieties",
    "Tsuga species"
   ],
   "scientific_name": "Tsuga species",
@@ -17321,7 +17346,6 @@
  {
   "name": "Weeping Sargent Hemlock",
   "aliases": [
-   "Many varieties",
    "Tsuga species"
   ],
   "scientific_name": "Tsuga species",
@@ -18149,7 +18173,9 @@
   "aliases": [
    "fipronil",
    "s-methoprene",
-   "methoprene"
+   "methoprene",
+   "frontline",
+   "frontline plus"
   ],
   "scientific_name": null,
   "category": "medicine",
@@ -18163,7 +18189,10 @@
   "name": "Imidacloprid (cat flea treatment)",
   "aliases": [
    "imidacloprid",
-   "flumethrin"
+   "flumethrin",
+   "advantage",
+   "advantage ii",
+   "seresto"
   ],
   "scientific_name": null,
   "category": "medicine",
@@ -18178,7 +18207,9 @@
   "aliases": [
    "selamectin",
    "moxidectin",
-   "eprinomectin"
+   "eprinomectin",
+   "revolution",
+   "revolution plus"
   ],
   "scientific_name": null,
   "category": "medicine",

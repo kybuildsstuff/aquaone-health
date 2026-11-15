@@ -118,7 +118,8 @@ export function buildReport(input: ReportInput, days = REPORT_DAYS) {
   const counts = { less: 0, normal: 0, more: 0 };
   for (const d of byDate.values()) counts[d]++;
   const checkIns = counts.less + counts.normal + counts.more;
-  const mostly = (["normal", "more", "less"] as const).reduce((best, k) => (counts[k] > counts[best] ? k : best), "normal" as Drink);
+  // A tie goes to the more worrying answer, so 7 "more" and 7 "normal" never reads "Normal" (audit, 15 Nov).
+  const mostly = (["normal", "more", "less"] as const).reduce((best, k) => (counts[k] >= counts[best] ? k : best), "normal" as Drink);
   const drinkingLabel = checkIns === 0 ? "No check-ins" : mostly === "normal" ? "Normal" : mostly === "more" ? "More than usual" : "Less than usual";
 
   // Weight: real two-step weigh-ins in the period, oldest first (the onboarding estimate is not one).

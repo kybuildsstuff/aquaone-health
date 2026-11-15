@@ -25,24 +25,33 @@ export async function POST(request: Request) {
   }
   const o = parsed.data;
 
-  const { count } = await supabase.from("cats").select("id", { count: "exact", head: true });
-  if (count && count > 0) return NextResponse.json({ error: "already_onboarded", next: "/today" }, { status: 409 });
-
-  const { data: cat, error: catError } = await supabase.from("cats").insert(catRow(o, user.id)).select("id").single();
-  if (catError) {
-    console.error("onboarding_failed cat_insert", user.id, catError.message);
-    return NextResponse.json({ error: "save_failed" }, { status: 500 });
-  }
-
-  const { error: prefError } = await supabase.from("reminder_prefs").upsert({
+  const prefs = {
     user_id: user.id,
     by_email: o.remindByEmail,
     by_text: false, // text reminders come after launch
     checkin_time: o.checkinTime,
     timezone: o.timezone,
-  });
+  };
+
+  const { count } = await supabase.from("cats").select("id", { count: "exact", head: true });
+  if (count && count > 0) {
+    // A retry after the cat saved but the settings didn't: write the settings if they're still
+    // missing (never overwrite ones she has changed since), so her timezone isn't left on the default.
+    await supabase.from("reminder_prefs").upsert(prefs, { onConflict: "user_id", ignoreDuplicates: true });
+    return NextResponse.json({ error: "already_onboarded", next: "/today" }, { status: 409 });
+  }
+
+  // Settings first: if the cat then fails to save, a retry starts clean; if the settings fail,
+  // nothing has been saved yet.
+  const { error: prefError } = await supabase.from("reminder_prefs").upsert(prefs);
   if (prefError) {
     console.error("onboarding_failed prefs_upsert", user.id, prefError.message);
+    return NextResponse.json({ error: "save_failed" }, { status: 500 });
+  }
+
+  const { data: cat, error: catError } = await supabase.from("cats").insert(catRow(o, user.id)).select("id").single();
+  if (catError) {
+    console.error("onboarding_failed cat_insert", user.id, catError.message);
     return NextResponse.json({ error: "save_failed" }, { status: 500 });
   }
 

@@ -247,3 +247,24 @@ describe("photo notes (Ask that can see)", () => {
     expect(withQuestion([], "Words only", "2026-11-15T01:00:00.000Z")[0].photoUrl).toBeUndefined();
   });
 });
+
+// Audit, 15 Nov: real wordings the rules missed before (each failed against the old rules).
+describe("red flags: the audit's missed phrasings", () => {
+  const MUST: [string, FlagId][] = [
+    ["I gave him tylenol for his pain", "poisoning"], ["I gave her half an advil", "poisoning"], ["I put dog flea drops on her", "poisoning"],
+    ["used my dog's advantix on him", "poisoning"], ["applied permethrin spot on to my cat", "poisoning"], ["she chewed a daylily leaf", "poisoning"],
+    ["she can't stand", "collapse"], ["he's limp and not moving", "collapse"], ["she is not responding to me", "collapse"], ["his back legs aren't working", "collapse"],
+    ["he's squatting in the litter box for ages", "urinary_blockage"], ["only peeing drops", "urinary_blockage"], ["she cries when peeing", "urinary_blockage"],
+    ["he's been in the litter box for an hour", "urinary_blockage"], ["hasn't been able to pee since morning", "urinary_blockage"],
+    ["she doesn't seem to be breathing", "breathing"], ["breathing rate 45", "breathing"], ["breathing rate is 48", "breathing"],
+    ["no appetite for 3 days", "not_eating"], ["off food for 2 days", "not_eating"], ["no food for 2 days", "not_eating"],
+    ["ate nothing for two days", "not_eating"], ["hasn't eaten since the day before yesterday", "not_eating"],
+    ["the cut hasn't stopped bleeding", "blood"],
+  ];
+  it.each(MUST)("%s → %s", (text, flag) => expect(detectRedFlags(text)).toContain(flag));
+
+  it.each(["no blood in her pee", "she is not panting", "his breathing is not fast", "I gave her the pill the vet prescribed", "she ate 3 days ago but is eating now", "breathing rate 24"])(
+    "stays quiet: %s",
+    (text) => expect(detectRedFlags(text)).toEqual([]),
+  );
+});

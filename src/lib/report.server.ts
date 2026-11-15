@@ -101,8 +101,9 @@ export async function loadSharedReport(token: string, at: Date = new Date()) {
   if (error) throw new Error(`shared cat read failed: ${error.message}`);
   if (!cat) return null;
   const { data: prefs } = await admin.from("reminder_prefs").select("timezone").eq("user_id", cat.owner_id).maybeSingle();
-  const report = await loadReportData(admin, share.catId, safeTimezone(prefs?.timezone), at);
-  return report ? { report, expiresAt: share.expiresAt } : null;
+  const tz = safeTimezone(prefs?.timezone);
+  const report = await loadReportData(admin, share.catId, tz, at);
+  return report ? { report, expiresAt: share.expiresAt, tz } : null;
 }
 
 // Makes a new share link for her cat, with her own session (RLS: only her own cat, as herself).

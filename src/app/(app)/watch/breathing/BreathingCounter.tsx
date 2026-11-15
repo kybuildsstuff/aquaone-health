@@ -60,6 +60,9 @@ export default function BreathingCounter({ catName, pronoun }: { catName: string
 
   const bpm = breathsPerMinute(taps);
   const high = bpm > BREATHING_RED_OVER;
+  // Under 15 is below the normal resting range: often a missed tap, so it is never shown as
+  // normal (audit, 15 Nov). Recount; a real slow rate in a weak cat is a vet call.
+  const low = bpm > 0 && bpm < 15;
 
   async function save() {
     setBusy(true);
@@ -138,6 +141,10 @@ export default function BreathingCounter({ catName, pronoun }: { catName: string
             {taps === 0 ? null : high ? (
               <p role="alert" className="rounded-2xl bg-[#FDECEE] px-4 py-3 text-[15px] leading-5.5 font-semibold text-[#8E2335]">
                 Over 30 a minute at rest. Go to a vet now, any hour.
+              </p>
+            ) : low ? (
+              <p className="rounded-2xl bg-[#F2C94C33] px-4 py-3 text-[15px] leading-5.5 font-semibold text-[#F2D98A]">
+                Under 15 a minute is lower than normal. Count again while {w.subj} sleeps. If it stays this low, or {w.subj} seems weak, call your vet.
               </p>
             ) : (
               <p className="rounded-2xl bg-[#1F9D6B33] px-4 py-3 text-[15px] leading-5.5 font-semibold text-[#9FE3C4]">Within the normal range at rest.</p>

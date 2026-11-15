@@ -12,7 +12,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!email || !userId) redirect("/sign-in");
 
   const member = await findMember(email);
-  if (!membershipAllows(member).allowed) redirect("/membership-ended");
+  const gate = membershipAllows(member);
+  if (!gate.allowed) redirect(gate.reason === "past_due" ? "/membership-ended?reason=past_due" : "/membership-ended");
   if (member && !member.auth_user_id) await linkMember(userId, email);
 
   return <>{children}</>;

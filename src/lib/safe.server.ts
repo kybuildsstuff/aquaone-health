@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ActionResult } from "@/lib/app-data.server";
-import type { Pronoun } from "@/lib/cat";
+import { words, type Pronoun } from "@/lib/cat";
 import { CONFIDENT_SCORE, pickMatch, type PhotoType, type SafetyCategory, type SafetyItem, type SafetyMatch, type Severity } from "@/lib/safe";
 import type { Identification, Identifier } from "@/lib/safe-vision.server";
 import { buildLabelIndex, matchLabel, splitIngredients, type LabelFlag, type LabelIndexItem } from "@/lib/safe-label";
@@ -53,9 +53,14 @@ export async function getItem(supabase: SupabaseClient, id: string): Promise<Saf
 }
 
 export async function listCategory(supabase: SupabaseClient, category: SafetyCategory) {
-  const { data, error } = await supabase.from("safety_items").select("id, name, severity").eq("category", category).order("name").limit(2000);
-  if (error) throw new Error(`safety_items list failed: ${error.message}`);
-  return (data ?? []) as { id: string; name: string; severity: Severity }[];
+  // PostgREST returns at most 1,000 rows a request whatever .limit() says, so page (audit, 15 Nov).
+  const out: { id: string; name: string; severity: Severity }[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from("safety_items").select("id, name, severity").eq("category", category).order("name").order("id").range(from, from + 999);
+    if (error) throw new Error(`safety_items list failed: ${error.message}`);
+    out.push(...((data ?? []) as typeof out));
+    if (!data || data.length < 1000) return out;
+  }
 }
 
 // Her most recent distinct lookups, newest first, for "Recently checked".
@@ -111,6 +116,7 @@ export type LabelResult = {
   unlisted: string[];
   listedSafe: number;
   worst: Severity | null;
+  subj: string; // her cat's pronoun ("she", "he", "they"), for "If she's eaten it"
 };
 
 // The whole list (about 1,200 rows) for label matching, read with her client (the list is
@@ -134,7 +140,7 @@ export async function labelLookup(supabase: SupabaseClient, identified: Identifi
   const product = identified.product || identified.name || "This label";
   if (cat) await logLookup(supabase, cat.id, `label: ${product}`, flagged[0]?.id ?? null, "photo");
   const readable = ingredients.length === 0 ? "none" : identified.readable;
-  return { kind: "label", product, readable, flagged, unlisted: match.unlisted, listedSafe: match.listedSafe, worst: match.worst };
+  return { kind: "label", product, readable, flagged, unlisted: match.unlisted, listedSafe: match.listedSafe, worst: match.worst, subj: words(cat?.pronoun).subj };
 }
 
 // Photo -> the model names it -> we match the name against our list. A match only counts when the

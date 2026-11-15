@@ -317,6 +317,24 @@ describe("Ask that can see (photos)", () => {
     const after = (await admin.from("chat_messages").select("content, photo_path, photo_note").eq("id", row.id).single()).data;
     expect(after).toEqual({ content: "Old one", photo_path: null, photo_note: "a food bowl" });
   });
+
+  it("a photo no message points to is listed for the nightly sweep; one still in use is not (audit, 15 Nov)", async () => {
+    modelReply = async () => "PHOTO: a bowl\nOK.";
+    await events(await askWithPhoto("Keep me"));
+    await events(await askWithPhoto("Orphan me"));
+    const rows = (await admin.from("chat_messages").select("id, content, photo_path").eq("cat_id", a.catId).eq("role", "user")).data!;
+    const kept = rows.find((r) => r.content === "Keep me")!;
+    const orphan = rows.find((r) => r.content === "Orphan me")!;
+    await admin.from("chat_messages").delete().eq("id", orphan.id);
+    // A future cut-off so the files just uploaded count; the cron itself uses a day ago.
+    const { data, error } = await admin.rpc("ask_photo_orphans", { p_before: new Date(Date.now() + 60000).toISOString(), p_limit: 5000 });
+    expect(error).toBeNull();
+    const names = (data as { name: string }[]).map((r) => r.name);
+    expect(names).toContain(orphan.photo_path);
+    expect(names).not.toContain(kept.photo_path);
+    const anon = await a.client.rpc("ask_photo_orphans", { p_before: new Date().toISOString() });
+    expect(anon.error).not.toBeNull(); // members can't list storage
+  });
 });
 
 describe("chat_messages row-level security", () => {

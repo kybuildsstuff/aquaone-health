@@ -5,7 +5,7 @@ import { runDailyEmails } from "@/lib/email.server";
 // Daily Vercel Cron (vercel.json): the trial-ending reminder (free month ends in 1-3 days) and
 // a catch-up for any welcome email the Loop webhook couldn't send.
 // Vercel sends "Authorization: Bearer $CRON_SECRET" when CRON_SECRET is set on the project.
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 function authorised(header: string | null, secret: string) {
   const a = Buffer.from(header ?? "");

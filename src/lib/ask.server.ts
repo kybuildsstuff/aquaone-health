@@ -379,9 +379,11 @@ function kwLine(kw: KwStatus): string {
   const reasons = kw.reasons.length ? ` Reasons: ${kw.reasons.join(", ")}.` : "";
   switch (kw.status) {
     case "learning":
-      return `learning (${kw.checkins_total} of 7 check-ins so far; drinking isn't judged yet).${reasons}`;
+      return kw.lapsed
+        ? `paused: only ${kw.recent_checkins} check-ins in the last 14 days, so drinking isn't judged until there are 7 recent ones.${reasons}`
+        : `learning (${kw.recent_checkins} of 7 check-ins so far; drinking isn't judged yet).${reasons}`;
     case "steady":
-      return `steady, nothing unusual. "More" on ${kw.more_in_last_7} and "less" on ${kw.less_in_last_7} of the last 7 check-ins.`;
+      return `steady on drinking: "more" on ${kw.more_in_last_7} and "less" on ${kw.less_in_last_7} of the last 7 check-ins.${kw.weight_change_pct != null ? ` Weight change against 4 weeks ago: ${kw.weight_change_pct}%.` : " No recent weigh-in pair, so weight is not judged."}${kw.latest_breaths != null ? ` Latest breathing count this week: ${kw.latest_breaths} a minute.` : " No breathing count this week, so breathing is not judged."}`;
     case "amber":
       return `amber: worth a vet check this week, not an emergency. "More" on ${kw.more_in_last_7} and "less" on ${kw.less_in_last_7} of the last 7 check-ins.${kw.weight_change_pct != null ? ` Weight change against 4 weeks ago: ${kw.weight_change_pct}%.` : ""}${reasons}`;
     case "red":
@@ -432,11 +434,21 @@ export async function deleteOldAskPhotos(now: Date = new Date()): Promise<{ dele
   for (;;) {
     const { data, error } = await supabaseAdmin().from("chat_messages").select("id, photo_path").not("photo_path", "is", null).lt("created_at", cutoff).limit(100);
     if (error) throw new Error(`old photo read failed: ${error.message}`);
-    if (!data?.length) return { deleted };
+    if (!data?.length) break;
     const removed = await supabaseAdmin().storage.from(ASK_PHOTO_BUCKET).remove(data.map((r) => r.photo_path as string));
     if (removed.error) throw new Error(`photo delete failed: ${removed.error.message}`);
     const cleared = await supabaseAdmin().from("chat_messages").update({ photo_path: null }).in("id", data.map((r) => r.id));
     if (cleared.error) throw new Error(`photo_path clear failed: ${cleared.error.message}`);
     deleted += data.length;
+  }
+  // Files no message points to (a deleted cat, a message that failed to save), a day old or more.
+  for (;;) {
+    const { data, error } = await supabaseAdmin().rpc("ask_photo_orphans", { p_before: new Date(now.getTime() - 86400000).toISOString(), p_limit: 500 });
+    if (error) throw new Error(`orphan photo read failed: ${error.message}`);
+    const names = ((data ?? []) as { name: string }[]).map((r) => r.name);
+    if (!names.length) return { deleted };
+    const removed = await supabaseAdmin().storage.from(ASK_PHOTO_BUCKET).remove(names);
+    if (removed.error) throw new Error(`orphan photo delete failed: ${removed.error.message}`);
+    deleted += names.length;
   }
 }

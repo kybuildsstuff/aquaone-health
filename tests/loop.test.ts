@@ -121,6 +121,19 @@ describe("Loop subscription -> member row", () => {
     expect(lastRenewalDate([], "2026-11-01T10:00:00.000Z")).toBeNull();
   });
 
+  // Audit, 15 Nov: bought in the same checkout as the fountain, the first order costs money.
+  it("bought with the fountain: the paid checkout order is not a renewal, so she is in her free month", () => {
+    const combined = { shopifyId: 555, status: "PROCESSED", billingDate: "2026-11-01T10:00:05.000Z", totalPriceUsd: "157.92" };
+    expect(derive(apiSub({ originOrderShopifyId: 555 }), history([combined]))).toMatchObject({ status: "trial", paid_through: null });
+    expect(derive(apiSub(), history([combined]))).toMatchObject({ status: "trial", paid_through: null }); // even without the origin id
+    expect(derive(apiSub({ originOrderShopifyId: 555 }), history([combined, renewal]))).toMatchObject({ status: "active", paid_through: "2026-12-31T10:00:00.000Z" });
+  });
+
+  it("while free, the trial ends on Loop's real next charge date (a rescheduled first charge moves it)", () => {
+    const epoch = Date.parse("2026-12-05T15:00:00.000Z") / 1000;
+    expect(derive(apiSub({ nextBillingDateEpoch: epoch })).trial_ends_at).toBe("2026-12-05T15:00:00.000Z");
+  });
+
   it("last payment failed: past_due, locked out", () => {
     const m = derive(apiSub({ lastPaymentStatus: "FAILED" }), history([freeFirst, renewal]));
     expect(m.status).toBe("past_due");

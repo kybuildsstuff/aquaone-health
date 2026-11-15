@@ -10,6 +10,17 @@ describe("membership gate", () => {
     expect(membershipAllows(row({ status: "active", paid_through: "2026-12-01T00:00:00Z" }), now)).toEqual({ allowed: true });
   });
 
+  // Audit, 15 Nov: a skipped or delayed charge must not mean free access forever.
+  it("ends trial and active access a few days after what she has runs out", () => {
+    const at = (iso: string) => new Date(iso);
+    const trial = row({ status: "trial", trial_ends_at: "2026-12-01T00:00:00Z" });
+    expect(membershipAllows(trial, at("2026-12-03T00:00:00Z"))).toEqual({ allowed: true }); // inside the grace days
+    expect(membershipAllows(trial, at("2026-12-05T00:00:00Z"))).toEqual({ allowed: false, reason: "ended" });
+    const active = row({ status: "active", trial_ends_at: "2026-11-01T00:00:00Z", paid_through: "2027-01-01T00:00:00Z" });
+    expect(membershipAllows(active, at("2026-12-20T00:00:00Z"))).toEqual({ allowed: true });
+    expect(membershipAllows(active, at("2027-01-10T00:00:00Z"))).toEqual({ allowed: false, reason: "ended" });
+  });
+
   it("refuses an unknown email", () => {
     expect(membershipAllows(null, now)).toEqual({ allowed: false, reason: "not_found" });
   });

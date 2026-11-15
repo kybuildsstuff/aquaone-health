@@ -14,6 +14,7 @@ export type LabelAnswer = {
   unlisted: string[];
   listedSafe: number;
   worst: Severity | null;
+  subj?: string;
 };
 
 // "safe" (green) only when every ingredient is on our list as safe; "unknown" (grey) when nothing
@@ -38,14 +39,21 @@ export default function LabelResult({ answer, onAgain }: { answer: LabelAnswer; 
       </div>
     );
   }
-  const hero = HERO[answer.worst ?? (answer.unlisted.length === 0 && answer.listedSafe > 0 ? "safe" : "unknown")];
+  // Green only when every ingredient was read and every one is on our list as safe.
+  const allSafe = answer.readable === "full" && answer.unlisted.length === 0 && answer.listedSafe > 0;
+  const hero = HERO[answer.worst ?? (allSafe ? "safe" : "unknown")];
+  const subj = answer.subj ?? "she";
+  const heroText =
+    !answer.worst && !allSafe && answer.listedSafe > 0
+      ? "Nothing here is on our list as a danger, but some ingredients aren't on our list at all. That doesn't mean they're safe: check with your vet, or ask."
+      : hero.text;
   const danger = answer.worst === "toxic" || answer.worst === "emergency";
   return (
     <div className="flex flex-col gap-3">
       <div className={`flex flex-col gap-1.5 rounded-[22px] px-5 py-4.5 ${hero.bg}`}>
         <span className={`text-xs leading-4 font-bold tracking-[0.08em] ${hero.eyebrow}`}>FROM YOUR LABEL PHOTO</span>
         <h2 className={`text-[22px] leading-7 font-bold ${hero.title}`}>{answer.product}</h2>
-        <p className={`text-[15px] leading-5 font-semibold ${hero.sub}`}>{hero.text}</p>
+        <p className={`text-[15px] leading-5 font-semibold ${hero.sub}`}>{heroText}</p>
       </div>
 
       {answer.readable === "partial" && (
@@ -69,7 +77,7 @@ export default function LabelResult({ answer, onAgain }: { answer: LabelAnswer; 
 
       {danger && (
         <div className="flex flex-col gap-2.5 rounded-[22px] bg-white p-4.5">
-          <p className="text-[15px] leading-5.5 font-semibold text-navy">If she&apos;s eaten, licked or touched it, call now:</p>
+          <p className="text-[15px] leading-5.5 font-semibold text-navy">If {subj === "they" ? "they\u2019ve" : `${subj}\u2019s`} eaten, licked or touched it, call now:</p>
           <PoisonLineButtons />
           <a href={EMERGENCY_VET_MAPS_URL} target="_blank" rel="noopener noreferrer" className="text-center text-sm leading-5 font-semibold text-red underline">
             Find an emergency vet

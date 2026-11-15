@@ -17,7 +17,7 @@ export default function RemindersForm({ initial }: { initial: ReminderInput }) {
     let status: number | null = null;
     let code: string | undefined;
     try {
-      const res = await fetch("/api/account/reminders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(next) });
+      const res = await fetch("/api/account/reminders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...next, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }) });
       status = res.status;
       code = (await res.json().catch(() => ({}))).error;
       if (res.ok) return setNote({ ok: true, text: "Saved" });

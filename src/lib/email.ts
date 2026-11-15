@@ -125,7 +125,9 @@ export function welcomeEmail(): Message {
 }
 
 export function trialEndingEmail(trialEndsAt: string, tz?: string | null): Message {
-  const date = longDate(trialEndsAt, tz);
+  // Without her timezone, the date is given in Hawaii time: the earliest calendar date anywhere in
+  // the US, so "cancel before <date>" is never a day too late for her (audit, 15 Nov).
+  const date = longDate(trialEndsAt, tz ?? "Pacific/Honolulu");
   const account = `${APP_URL}/account`;
   const html = layout({
     preheader: `Your free month ends ${date}. Then ${PRICE} every 30 days.`,

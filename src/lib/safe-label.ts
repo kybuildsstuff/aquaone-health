@@ -22,6 +22,10 @@ export const LABEL_IGNORE = new Set([
 // oil), so it is judged like a single item: the ignore list only applies to longer ingredient lists.
 export const WHOLE_PRODUCT_MAX = 2;
 
+// Short terms that are distinctive enough to count inside a longer ingredient name
+// ("Delta-9 THC Distillate", "contains lye"); other terms need 5+ letters (audit, 15 Nov).
+const SHORT_DISTINCT = new Set(["thc", "lye", "deet"]);
+
 // "pyrethrins" on the label, "pyrethrin" on our list: try the word with and without a final s.
 const forms = (n: string) => [n, n.endsWith("s") ? n.slice(0, -1) : `${n}s`];
 
@@ -63,36 +67,44 @@ export function buildLabelIndex(items: LabelIndexItem[]): { exact: Map<string, L
       if (!prev || RANK[item.severity] > RANK[prev.severity]) exact.set(n, item);
       // Inside a longer ingredient ("dehydrated garlic", "permethrin 0.1%"), only distinctive terms
       // for items that need a warning count, so ordinary food words never trip it.
-      if (item.severity !== "safe" && n.length >= 5) contained.push({ term: n, item });
+      if (item.severity !== "safe" && (n.length >= 5 || SHORT_DISTINCT.has(n))) contained.push({ term: n, item });
     }
   }
   contained.sort((a, b) => b.term.length - a.term.length);
   return { exact, contained };
 }
 
+// One name (the whole ingredient, or the text inside its brackets) against our list.
+function lookup(n: string, index: ReturnType<typeof buildLabelIndex>, skip: (t: string) => boolean): LabelIndexItem | undefined {
+  if (!n || skip(n)) return undefined;
+  const padded = forms(n).map((f) => ` ${f} `);
+  return (
+    forms(n)
+      .filter((f) => !skip(f))
+      .map((f) => index.exact.get(f))
+      .find(Boolean) ??
+    index.contained.find((c) => !skip(c.term) && padded.some((p) => p.includes(` ${c.term} `) || p.includes(` ${c.term}s `)))?.item
+  );
+}
+
 export function matchLabel(ingredients: string[], index: ReturnType<typeof buildLabelIndex>): LabelMatch {
-  const useIgnore = ingredients.length > WHOLE_PRODUCT_MAX;
-  const skip = (term: string) => useIgnore && LABEL_IGNORE.has(term);
+  const longList = ingredients.length > WHOLE_PRODUCT_MAX;
   const flagged: LabelFlag[] = [];
   const unlisted: string[] = [];
   let listedSafe = 0;
-  for (const ingredient of ingredients) {
-    const n = norm(ingredient);
-    if (!n || skip(n)) {
-      unlisted.push(ingredient);
-      continue;
-    }
-    const padded = forms(n).map((f) => ` ${f} `);
-    const item =
-      forms(n)
-        .filter((f) => !skip(f))
-        .map((f) => index.exact.get(f))
-        .find(Boolean) ??
-      index.contained.find((c) => !skip(c.term) && padded.some((p) => p.includes(` ${c.term} `) || p.includes(` ${c.term}s `)))?.item;
+  ingredients.forEach((ingredient, i) => {
+    // The first ingredient is what the product mostly is (a box of salt with anti-caking agent),
+    // so the ordinary-label-word list never applies to it.
+    const skip = (term: string) => longList && i > 0 && LABEL_IGNORE.has(term);
+    // The text in brackets often names the danger: "Melaleuca Alternifolia (Tea Tree) Leaf Oil",
+    // "natural flavor (onion)". Each name is looked up and the worst answer kept.
+    const names = [norm(ingredient), ...[...ingredient.matchAll(/\(([^)]*)\)/g)].map((m) => norm(m[1]))];
+    const found = names.map((n) => lookup(n, index, skip)).filter((x): x is LabelIndexItem => Boolean(x));
+    const item = found.sort((a, b) => RANK[b.severity] - RANK[a.severity])[0];
     if (item && item.severity !== "safe") flagged.push({ ingredient, id: item.id, name: item.name, severity: item.severity, summary: item.summary });
     else if (item) listedSafe++;
     else unlisted.push(ingredient);
-  }
+  });
   flagged.sort((a, b) => RANK[b.severity] - RANK[a.severity]);
   return { flagged, unlisted, listedSafe, worst: flagged[0]?.severity ?? null };
 }

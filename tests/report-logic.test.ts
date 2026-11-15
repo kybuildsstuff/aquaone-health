@@ -165,3 +165,11 @@ describe("PDF", () => {
     expect(pdfFileName("小虎")).toBe("cat-vet-report.pdf");
   });
 });
+
+describe("drinking label (audit, 15 Nov)", () => {
+  it("a tie goes to the more worrying answer", () => {
+    const days = (n: number, drinking: "less" | "normal" | "more", start: number) => Array.from({ length: n }, (_, i) => ({ date: addDays(TODAY, -(start + i)), drinking }));
+    expect(buildReport(base({ checkIns: [...days(3, "normal", 0), ...days(3, "more", 3)] })).drinking.label).toBe("More than usual");
+    expect(buildReport(base({ checkIns: [...days(4, "normal", 0), ...days(3, "more", 4)] })).drinking.label).toBe("Normal");
+  });
+});

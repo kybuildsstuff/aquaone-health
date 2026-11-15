@@ -146,6 +146,9 @@ export const CHECKIN_TIMES = [
 export const reminderSchema = z.object({
   byEmail: z.boolean(),
   checkinTime: z.enum(["08:00", "12:00", "19:00"]),
+  // Her phone's timezone, sent with every save, so a missing or wrong one (the New York default)
+  // corrects itself the first time she touches her reminders (audit, 15 Nov).
+  timezone: z.string().max(64).optional(),
 });
 export type ReminderInput = z.output<typeof reminderSchema>;
 

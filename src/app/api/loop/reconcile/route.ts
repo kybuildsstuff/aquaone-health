@@ -5,7 +5,7 @@ import { reconcileAll } from "@/lib/loop.server";
 // Nightly Vercel Cron (vercel.json): re-reads every AquaOne Health subscription from Loop
 // and corrects members rows, catching any webhook Loop failed to deliver.
 // Vercel sends "Authorization: Bearer $CRON_SECRET" when CRON_SECRET is set on the project.
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 function authorised(header: string | null, secret: string) {
   const a = Buffer.from(header ?? "");

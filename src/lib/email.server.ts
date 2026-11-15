@@ -116,15 +116,26 @@ export async function runDailyEmails(now = new Date(), opts: { onlyEmails?: stri
 
   const { after, atMost } = trialEndingWindow(now);
   const scoped = <Q extends { in: (c: string, v: string[]) => Q }>(q: Q): Q => (opts.onlyEmails ? q.in("email", opts.onlyEmails) : q);
-  const trials = await scoped(admin
-    .from("members")
-    .select(MEMBER_COLUMNS)
-    .eq("status", "trial")
-    .gt("trial_ends_at", after)
-    .lte("trial_ends_at", atMost)
-    .or("shopify_customer_id.is.null,shopify_customer_id.neq.TEST"));
-  if (trials.error) throw new Error(`trial members read failed: ${trials.error.message}`);
-  for (const m of (trials.data ?? []) as MemberWithUser[]) {
+  // Read in pages (the API returns at most 1,000 rows per request), soonest trial end first, so if a
+  // very large day runs out of time the members closest to their charge are emailed first; the
+  // window spans two daily runs and sends are once-only, so the next run picks up the rest.
+  const trials: MemberWithUser[] = [];
+  for (let from = 0; ; from += 1000) {
+    const page = await scoped(admin
+      .from("members")
+      .select(MEMBER_COLUMNS)
+      .eq("status", "trial")
+      .gt("trial_ends_at", after)
+      .lte("trial_ends_at", atMost)
+      .or("shopify_customer_id.is.null,shopify_customer_id.neq.TEST"))
+      .order("trial_ends_at")
+      .order("id")
+      .range(from, from + 999);
+    if (page.error) throw new Error(`trial members read failed: ${page.error.message}`);
+    trials.push(...((page.data ?? []) as MemberWithUser[]));
+    if (!page.data || page.data.length < 1000) break;
+  }
+  for (const m of trials) {
     if (!trialEndingDue(m, now)) continue; // the same rule the query expresses, checked in code too
     try {
       count(summary.trialEnding, await sendOnce(m, "trial_ending", trialEndingEmail(m.trial_ends_at!, await timezoneFor(m.auth_user_id))));
@@ -135,20 +146,28 @@ export async function runDailyEmails(now = new Date(), opts: { onlyEmails?: stri
   }
 
   const since = new Date(now.getTime() - WELCOME_CATCH_UP_DAYS * 86400_000).toISOString();
-  const recent = await scoped(admin
-    .from("members")
-    .select(MEMBER_COLUMNS)
-    .gte("created_at", since)
-    .or("shopify_customer_id.is.null,shopify_customer_id.neq.TEST"));
-  if (recent.error) throw new Error(`recent members read failed: ${recent.error.message}`);
-  const ids = (recent.data ?? []).map((m) => m.id as string);
+  const recent: MemberWithUser[] = [];
+  for (let from = 0; ; from += 1000) {
+    const page = await scoped(admin
+      .from("members")
+      .select(MEMBER_COLUMNS)
+      .gte("created_at", since)
+      .or("shopify_customer_id.is.null,shopify_customer_id.neq.TEST"))
+      .order("id")
+      .range(from, from + 999);
+    if (page.error) throw new Error(`recent members read failed: ${page.error.message}`);
+    recent.push(...((page.data ?? []) as MemberWithUser[]));
+    if (!page.data || page.data.length < 1000) break;
+  }
+  const ids = recent.map((m) => m.id);
   const welcomed = new Set<string>();
-  if (ids.length) {
-    const logs = await admin.from("email_log").select("member_id").eq("kind", "welcome").in("status", ["sending", "sent"]).in("member_id", ids);
+  // Ids go in chunks: a thousand ids in one URL is too long for the API.
+  for (let i = 0; i < ids.length; i += 150) {
+    const logs = await admin.from("email_log").select("member_id").eq("kind", "welcome").in("status", ["sending", "sent"]).in("member_id", ids.slice(i, i + 150));
     if (logs.error) throw new Error(`email_log read failed: ${logs.error.message}`);
     for (const l of logs.data ?? []) welcomed.add(l.member_id as string);
   }
-  for (const m of (recent.data ?? []) as MemberWithUser[]) {
+  for (const m of recent) {
     if (welcomed.has(m.id) || !welcomeDue(m, now)) continue;
     try {
       count(summary.welcome, await sendOnce(m, "welcome", welcomeEmail()));

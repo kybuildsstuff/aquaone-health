@@ -94,6 +94,8 @@ export type LoopSubscription = {
   cancelledAt?: string | null;
   isMarkedForCancellation?: boolean | null;
   nextBillingDateEpoch?: number | null;
+  originOrderShopifyId?: number | string | null;
+  completedOrdersCount?: number | null;
   lastPaymentStatus?: string | null;
   isBillingRetryOn?: boolean | null;
   billingPolicy?: { interval?: string | null; intervalCount?: number | null } | null;
@@ -102,7 +104,7 @@ export type LoopSubscription = {
 };
 
 // The subset of GET /subscription/{id}/order/history entries that membership needs.
-export type LoopOrder = { status?: string | null; billingDate?: string | null; totalPriceUsd?: string | number | null };
+export type LoopOrder = { shopifyId?: number | string | null; status?: string | null; billingDate?: string | null; totalPriceUsd?: string | number | null };
 
 export type DerivedMember = {
   email: string;
@@ -124,16 +126,19 @@ export function addInterval(fromIso: string, policy: LoopSubscription["billingPo
   return new Date(d.getTime() + count * DAY).toISOString();
 }
 
-// A renewal is a processed order after the first one: it cost money, or it was billed a day
-// or more after the subscription began. The $0 first order (the free month) is not one.
+// A renewal is a processed order billed a day or more after the subscription began, and never the
+// checkout order itself. The order total can't tell them apart: when the membership is bought in the
+// same checkout as the fountain, the first order costs money (the fountain and shipping) even though
+// the membership line in it is free (audit, 15 Nov).
 const PROCESSED = new Set(["PROCESSED", "SUCCESS"]);
-export function lastRenewalDate(orders: LoopOrder[], createdAt: string): string | null {
+export function lastRenewalDate(orders: LoopOrder[], createdAt: string, originOrderId?: number | string | null): string | null {
   const start = new Date(createdAt).getTime();
+  const origin = originOrderId != null ? String(originOrderId) : null;
   const renewals = orders
     .filter((o) => PROCESSED.has(String(o.status ?? "").toUpperCase()) && o.billingDate)
-    .map((o) => ({ t: new Date(o.billingDate as string).getTime(), price: Number(o.totalPriceUsd ?? 0) }))
-    .filter((o) => Number.isFinite(o.t) && (o.price > 0 || o.t >= start + DAY))
-    .map((o) => o.t);
+    .filter((o) => !origin || String(o.shopifyId ?? "") !== origin)
+    .map((o) => new Date(o.billingDate as string).getTime())
+    .filter((t) => Number.isFinite(t) && t >= start + DAY);
   return renewals.length ? new Date(Math.max(...renewals)).toISOString() : null;
 }
 
@@ -148,15 +153,18 @@ export type DeriveResult = { ok: true; member: DerivedMember } | { ok: false; re
 //   ACTIVE, marked for cancellation  -> cancelled (access runs to the end of what was paid for)
 //   ACTIVE, a renewal on record      -> active
 //   ACTIVE, no renewal yet           -> trial
-// trial_ends_at = created + one billing interval (the free first 30 days).
+// trial_ends_at = Loop's next charge date while still free (else created + one interval).
 // paid_through  = last renewal's billing date + one interval (null while still free).
 export function deriveMember(sub: LoopSubscription, orders: LoopOrder[]): DeriveResult {
   const email = sub.customer?.email ? normaliseEmail(sub.customer.email) : "";
   if (!email.includes("@")) return { ok: false, reason: "no_customer_email" };
   if (!sub.createdAt || Number.isNaN(new Date(sub.createdAt).getTime())) return { ok: false, reason: "no_created_at" };
 
-  const trialEndsAt = addInterval(sub.createdAt, sub.billingPolicy);
-  const lastPaid = lastRenewalDate(orders, sub.createdAt);
+  const lastPaid = lastRenewalDate(orders, sub.createdAt, sub.originOrderShopifyId);
+  // While still free, the trial ends when Loop will actually charge (a rescheduled first charge
+  // moves it); otherwise created + one interval.
+  const nextCharge = sub.nextBillingDateEpoch && sub.nextBillingDateEpoch > 0 ? new Date(sub.nextBillingDateEpoch * 1000) : null;
+  const trialEndsAt = !lastPaid && nextCharge && nextCharge.getTime() > new Date(sub.createdAt).getTime() ? nextCharge.toISOString() : addInterval(sub.createdAt, sub.billingPolicy);
   const paidThrough = lastPaid ? addInterval(lastPaid, sub.billingPolicy) : null;
 
   let status: MemberStatus;

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { loadSharedReport } from "@/lib/report.server";
 import { dayLabel } from "@/lib/report";
+import { localDate } from "@/lib/dates";
 import { ReportDetails, ReportSummaryCard } from "@/app/(app)/report/ReportBody";
 
 // The public, read-only report behind a share link: no sign-in, one cat, nothing else reachable.
@@ -42,7 +43,7 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
       </a>
       <ReportDetails r={r} />
       <p className="px-2.5 text-center text-xs leading-4.25 text-[#8A93A8]">
-        Recorded at home by {r.cat.name}&apos;s owner. This link stops working on {dayLabel(shared.expiresAt.slice(0, 10), true)}.
+        Recorded at home by {r.cat.name}&apos;s owner. This link stops working on {dayLabel(localDate(shared.tz, new Date(shared.expiresAt)), true)}.
       </p>
     </div>
   );

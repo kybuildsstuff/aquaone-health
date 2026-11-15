@@ -57,7 +57,7 @@ describe("Label Scan matching", () => {
 
   it("an ignored word never flags, even though our list uses it elsewhere", () => {
     for (const w of ["salt", "yeast", "zinc", "iron", "liver"]) expect(LABEL_IGNORE.has(w)).toBe(true);
-    expect(scan(["Salt", "Yeast", "Zinc", "Iron"]).flagged).toEqual([]);
+    expect(scan(["Chicken", "Salt", "Yeast", "Zinc", "Iron"]).flagged).toEqual([]); // the first ingredient is never ignored (audit, 15 Nov)
   });
 
   it("a product that is only salt is judged as salt: a warning, not a pass (Ky's sea salt test, 15 Nov)", () => {
@@ -83,5 +83,27 @@ describe("Label Scan matching", () => {
     expect(scan(["Chicken", "Rice", "Pumpkin"])).toMatchObject({ flagged: [], unlisted: [], worst: null });
     expect(scan(["Chicken", "Rice", "Pumpkin"]).listedSafe).toBe(3);
     expect(scan(["Water", "Guar Gum", "Taurine"]).listedSafe).toBe(0);
+  });
+
+  // Audit, 15 Nov (all reproduced against the real list before the fix).
+  it("reads the name inside brackets: tea tree shampoo, onion in natural flavour, garlic in spices", () => {
+    expect(scan(["Aqua", "Melaleuca Alternifolia (Tea Tree) Leaf Oil", "Glycerin"]).flagged.map((f) => f.name)).toContain("Tea tree oil");
+    expect(scan(["Chicken", "Rice", "Natural Flavor (Onion)"]).flagged.map((f) => f.name)).toContain("Onion");
+    expect(scan(["Beef", "Spices (Garlic, Paprika)", "Water"]).flagged.map((f) => f.name)).toContain("Garlic");
+  });
+
+  it("knows the Latin label names for essential oils and tea tree", () => {
+    expect(scan(["Water", "Mentha Piperita Oil", "Glycerin"]).worst).toBe("emergency");
+    expect(scan(["Water", "Lavandula Angustifolia Oil", "Glycerin"]).worst).toBe("emergency");
+  });
+
+  it("finds THC inside a longer name (a cannabis gummy)", () => {
+    expect(scan(["Sugar", "Corn Syrup", "Delta-9 THC Distillate", "Pectin"]).flagged[0].name).toBe("Cannabis");
+    expect(scan(["Hemp-derived Delta-8 THC"]).flagged.map((f) => f.name)).toContain("Cannabis");
+  });
+
+  it("a box of table salt with additives is still judged as salt (the first ingredient is never ignored)", () => {
+    expect(scan(["Salt", "Calcium Silicate", "Potassium Iodide"]).flagged.map((f) => f.name)).toContain("Salt");
+    expect(scan(["Chicken", "Salt", "Rice"]).flagged).toEqual([]); // salt further down a treat label is still ordinary
   });
 });

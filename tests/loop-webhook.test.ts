@@ -137,6 +137,18 @@ describe("Loop webhook", () => {
     expect(count).toBe(1);
   });
 
+  // Audit, 15 Nov: a member who changes her email in Shopify must still be able to sign in.
+  it("an email changed in Shopify moves her row to the new email (same contract, one row)", async () => {
+    const before = email("moved-old");
+    const after = email("moved-new");
+    const sub = makeSub(before);
+    await send("subscription/created", sub);
+    setLoop(sub, { customer: { ...(sub.customer as object), email: after } as Sub["customer"] });
+    await send("subscription/updated", sub);
+    expect(await row(before)).toBeNull();
+    expect(await row(after)).toMatchObject({ contract_id: String(sub.id), status: "trial" });
+  });
+
   it("walks a member through renewal, failed payment, recovery, cancel and expiry", async () => {
     const mail = email("life");
     const sub = makeSub(mail);

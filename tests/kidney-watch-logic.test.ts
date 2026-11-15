@@ -72,3 +72,19 @@ describe("words", () => {
     expect(actionErrorMessage(400, "not_heavier")).toMatch(/heavier/);
   });
 });
+
+describe("Kidney Watch words name only what was judged (audit, 15 Nov)", async () => {
+  const { statusLine } = await import("../src/lib/kidney-watch-copy");
+  const cat = { name: "Milo", pronoun: "he" as const };
+  const steady = (over: Record<string, unknown>) => toKwStatus({ status: "steady", reasons: [], checkins_total: 9, recent_checkins: 9, more_in_last_7: 0, less_in_last_7: 0, weight_change_pct: null, latest_breaths: null, ...over });
+  it("drinking only, when there's no recent weigh-in or breathing count", () => {
+    expect(statusLine(steady({}), cat).sub).toBe("Drinking is within Milo's normal.");
+  });
+  it("all three when all three were measured", () => {
+    expect(statusLine(steady({ weight_change_pct: -1, latest_breaths: 22 }), cat).sub).toBe("Drinking, weight and breathing are all within Milo's normal.");
+  });
+  it("lapsed check-ins say Kidney Watch needs check-ins, not 'learning'", () => {
+    const s = toKwStatus({ status: "learning", reasons: [], checkins_total: 40, recent_checkins: 2, lapsed: true });
+    expect(statusLine(s, cat)).toEqual({ title: "Kidney Watch needs check-ins", sub: "It only judges the last two weeks. Five more daily check-ins and it's back on." });
+  });
+});

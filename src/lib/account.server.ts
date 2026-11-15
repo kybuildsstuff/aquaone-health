@@ -65,7 +65,13 @@ export async function updateReminders(supabase: SupabaseClient, input: ReminderI
   if (!auth.user) return { ok: false, status: 401, error: "signed_out" };
   const { error } = await supabase
     .from("reminder_prefs")
-    .upsert({ user_id: auth.user.id, by_email: input.byEmail, by_text: false, checkin_time: input.checkinTime });
+    .upsert({
+      user_id: auth.user.id,
+      by_email: input.byEmail,
+      by_text: false,
+      checkin_time: input.checkinTime,
+      ...(input.timezone && safeTimezone(input.timezone) === input.timezone ? { timezone: input.timezone } : {}),
+    });
   if (error) return { ok: false, status: 500, error: "save_failed", detail: error.message };
   return { ok: true, data: {} };
 }

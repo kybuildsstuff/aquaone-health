@@ -53,15 +53,28 @@ export function statusLine(s: KwStatus, cat: CatWords) {
       return { title: "Worth a vet check", sub: parts.join(" ") };
     }
     case "learning": {
-      const left = Math.max(0, 7 - s.checkins_total);
+      const left = Math.max(0, 7 - s.recent_checkins);
+      if (s.lapsed)
+        return {
+          title: "Kidney Watch needs check-ins",
+          sub: `It only judges the last two weeks. ${capitalWord(numberWord(left))} more daily check-in${left === 1 ? "" : "s"} and it's back on.`,
+        };
       return {
         title: `Learning ${w.poss} normal`,
         sub: `${left === 1 ? "One more daily check-in" : `${capitalWord(numberWord(left))} more daily check-ins`} and Kidney Watch is on.`,
       };
     }
     default:
-      return { title: "All steady", sub: `Drinking, weight and breathing are all within ${cat.name}'s normal.` };
+      return { title: "All steady", sub: steadySub(s, cat.name) };
   }
+}
+
+// Name only what was actually judged (audit, 15 Nov): no weigh-in or breathing count in the
+// recent window means that signal isn't claimed as normal.
+function steadySub(s: KwStatus, name: string) {
+  const judged = ["Drinking", ...(s.weight_change_pct != null ? ["weight"] : []), ...(s.latest_breaths != null ? ["breathing"] : [])];
+  const list = judged.length === 1 ? judged[0] : `${judged.slice(0, -1).join(", ")} and ${judged[judged.length - 1]}`;
+  return `${list} ${judged.length === 1 ? "is" : "are all"} within ${name}'s normal.`;
 }
 
 const NUMBER_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven"];

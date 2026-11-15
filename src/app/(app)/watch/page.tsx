@@ -24,7 +24,7 @@ export default async function Watch() {
 
   const drinkingLabel =
     status.status === "learning"
-      ? { text: `${status.checkins_total} ${status.checkins_total === 1 ? "day" : "days"} so far`, cls: "text-navy" }
+      ? { text: status.lapsed ? `${status.recent_checkins} in the last 2 weeks` : `${status.recent_checkins} ${status.recent_checkins === 1 ? "day" : "days"} so far`, cls: "text-navy" }
       : status.reasons.includes("drinking_more")
         ? { text: "More than usual", cls: "text-[#B07A00]" }
         : status.reasons.includes("drinking_less")
@@ -49,7 +49,7 @@ export default async function Watch() {
     <TabScreen>
       <header className="flex flex-col gap-0.5 px-6 pt-[max(26px,env(safe-area-inset-top))]">
         <p className="text-sm leading-4.5 font-medium text-slate">
-          {status.status === "learning" ? `Day ${k.dayNumber} · building ${cat.name}'s baseline` : `Learned from ${status.checkins_total} days of check-ins`}
+          {status.status === "learning" ? (status.lapsed ? "Paused · needs recent check-ins" : `Day ${k.dayNumber} · building ${cat.name}'s baseline`) : `Learned from ${status.checkins_total} days of check-ins`}
         </p>
         <h1 className="text-3xl leading-8.75 font-medium tracking-[-0.02em]">Kidney Watch</h1>
       </header>

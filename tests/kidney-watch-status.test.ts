@@ -39,7 +39,7 @@ async function statusFor(s: Scenario): Promise<Status> {
       for (const b of s.breaths ?? []) {
         await tx`insert into breathing_counts (cat_id, taken_at, breaths_per_min) values (${cat.id}, ${new Date(TODAY.getTime() - b.daysAgo * 86400000)}, ${b.bpm})`;
       }
-      const [row] = await tx`select * from kidney_watch_status(${cat.id})`;
+      const [row] = await tx`select * from kidney_watch_status(${cat.id}, ${day(0)}::date)`;
       result = row as unknown as Status;
       throw new Rollback();
     });
@@ -137,4 +137,47 @@ describe("kidney_watch_status", () => {
     expect((await statusFor({ checkins: normals(8), breaths: [{ daysAgo: 0, bpm: 30 }] })).status).toBe("steady");
     expect((await statusFor({ checkins: normals(8), breaths: [{ daysAgo: 3, bpm: 36 }, { daysAgo: 0, bpm: 24 }] })).status).toBe("steady");
   });
+
+  // Audit, 15 Nov: only recent data is judged.
+  it("lapsed: a month-old run of check-ins is not 'steady'; drinking waits for recent check-ins", async () => {
+    // Eight 'more' check-ins that ended 20 days ago, nothing since.
+    const r = await statusForGap(["more", "more", "more", "more", "more", "more", "more", "more"], 20);
+    expect(r.status).toBe("learning");
+    expect(r.lapsed).toBe(true);
+    expect(r.reasons).toEqual([]);
+    expect(r.recent_checkins).toBe(0);
+  });
+
+  it("an old high breathing count no longer keeps the page red", async () => {
+    expect((await statusFor({ checkins: normals(8), breaths: [{ daysAgo: 9, bpm: 40 }] })).status).toBe("steady");
+    expect((await statusFor({ checkins: normals(8), breaths: [{ daysAgo: 2, bpm: 40 }] })).status).toBe("red");
+  });
+
+  it("a weight drop is judged only when the latest weigh-in is recent", async () => {
+    const old = await statusFor({ checkins: normals(8), weighins: [{ daysAgo: 68, catLb: 10 }, { daysAgo: 40, catLb: 9 }] });
+    expect(old.reasons).not.toContain("weight_down_5pct");
+    const fresh = await statusFor({ checkins: normals(8), weighins: [{ daysAgo: 28, catLb: 10 }, { daysAgo: 0, catLb: 9 }] });
+    expect(fresh.reasons).toContain("weight_down_5pct");
+  });
 });
+
+// Check-ins that ended `gapDays` ago (nothing since), for the lapsed case.
+async function statusForGap(checkins: Drink[], gapDays: number): Promise<Status & { recent_checkins: number; lapsed: boolean }> {
+  let result: (Status & { recent_checkins: number; lapsed: boolean }) | undefined;
+  try {
+    await sql.begin(async (tx) => {
+      const userId = randomUUID();
+      await tx`insert into auth.users (id, email, aud, role) values (${userId}, ${`kw-${userId}@test.invalid`}, 'authenticated', 'authenticated')`;
+      const [cat] = await tx`insert into cats (owner_id, name) values (${userId}, 'Test') returning id`;
+      for (let i = 0; i < checkins.length; i++) {
+        await tx`insert into check_ins (cat_id, date, drinking) values (${cat.id}, ${day(-gapDays - (checkins.length - 1 - i))}, ${checkins[i]})`;
+      }
+      const [row] = await tx`select * from kidney_watch_status(${cat.id}, ${day(0)}::date)`;
+      result = row as never;
+      throw new Rollback();
+    });
+  } catch (e) {
+    if (!(e instanceof Rollback)) throw e;
+  }
+  return result!;
+}

@@ -45,7 +45,17 @@ const PEE = "(pee|peeing|wee|weeing|urinate|urinating|pass urine|go to the toile
 const EXPOSURE =
   "(ate|eaten|(is|was|been|'s|keeps) (eating|licking|chewing|drinking)|licked|swallowed|chewed|bit|bitten into|nibbled|drank|drunk|ingested|got into|had some|got some|pollen|on (his|her|their|its) (fur|paws?|face|nose|coat)|spilled|sprayed|put .{0,30}on (him|her|them))";
 const TOXIN =
-  "(lil(y|ies)|antifreeze|anti-freeze|ethylene glycol|coolant|rat poison|mouse poison|rodenticide|slug (bait|pellets)|bait|poison|bleach|cleaning (product|spray|fluid)|detergent|permethrin|dog flea|flea (treatment|drops|spot[- ]on) (for|meant for) dogs|essential oils?|tea tree|chocolate|onions?|garlic|xylitol|grapes?|raisins?|tylenol|acetaminophen|paracetamol|ibuprofen|advil|motrin|aspirin|naproxen|aleve|adderall|antidepressants?|prozac|medications?|medicines?|meds|pills?|tablets?|vitamin d|marijuana|cannabis|weed|edibles?)";
+  "(((day|tiger|easter|stargazer|asiatic) ?)?lil(y|ies)|antifreeze|anti-freeze|ethylene glycol|coolant|rat poison|mouse poison|rodenticide|slug (bait|pellets)|bait|poison|bleach|cleaning (product|spray|fluid)|detergent|permethrin|advantix|k9 advantix|vectra|dog flea|dog'?s flea|flea (treatment|drops|spot[- ]on) (for|meant for) dogs|essential oils?|tea tree|chocolate|onions?|garlic|xylitol|grapes?|raisins?|tylenol|acetaminophen|paracetamol|ibuprofen|advil|motrin|aspirin|naproxen|aleve|adderall|antidepressants?|prozac|medications?|medicines?|meds|pills?|tablets?|vitamin d|marijuana|cannabis|weed|edibles?)";
+
+// "For two days", "since the day before yesterday": how long she's gone without food.
+const DURATION =
+  "(\\d+\\s*(days?|hours?|hrs?)|(two|three|four|five|a couple of|couple of|several|a few)\\s+days?|a (whole |full )?day|all day|for days|since (the )?day before yesterday|since yesterday|since (last night|this morning|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|24)";
+// Something she GAVE or PUT on her cat that is dangerous to cats even in a normal human or dog
+// amount (audit, 15 Nov: "I gave him Tylenol", "I put dog flea drops on her"). A pill the vet
+// prescribed is not on this list, so "I gave her the pill the vet prescribed" never flags.
+const GIVEN = "(gave|given|give|giving|put|putting|applied|apply|used|using|rubbed)";
+const GIVEN_TOXIN =
+  "(tylenol|acetaminophen|paracetamol|ibuprofen|advil|motrin|aspirin|naproxen|aleve|permethrin|advantix|vectra|dog flea|dog'?s flea|dog'?s (tick|spot[- ]on)|flea .{0,20}(for|meant for) dogs|essential oils?|tea tree)";
 
 const RULES: Rule[] = [
   // Urinary blockage: the classic "male cat straining, nothing coming out".
@@ -54,6 +64,12 @@ const RULES: Rule[] = [
   { flag: "urinary_blockage", re: /\bstrain(s|ed|ing)?\b/i, negatable: true },
   { flag: "urinary_blockage", re: /\b(nothing|little|hardly anything|only drops|just drops|a few drops)\s+(\w+\s+){0,1}(comes?|came|coming|is coming)\s+out\b/i },
   { flag: "urinary_blockage", re: /\bno (pee|urine|wee)\b/i },
+  { flag: "urinary_blockage", re: new RegExp(`\\b(hasn'?t|has not|haven'?t|not|isn'?t) (been )?able to ${PEE}`, "i") },
+  { flag: "urinary_blockage", re: new RegExp(`\\b(only |just )?${PEE}\\s+(only\\s+)?(in\\s+)?(tiny |small |little |a few )?(drops|dribbles)\\b`, "i") },
+  { flag: "urinary_blockage", re: new RegExp(`\\b(cry|cries|cried|crying|yowl\\w*|scream\\w*|howl\\w*|meows?|meowing|whin\\w*|in pain)\\b.{0,20}\\b(when|while|as)\\s+(\\w+\\s+){0,1}${PEE}`, "i") },
+  { flag: "urinary_blockage", re: /\b(keeps?|kept|constantly|repeatedly)\s+(\w+\s+){0,1}squat\w*/i },
+  { flag: "urinary_blockage", re: /\bsquat\w*\b.{0,40}\b(ages|a long time|forever|minutes|an hour|hours|nothing|no pee|drops?)\b/i },
+  { flag: "urinary_blockage", re: /\b(in|on) the litter( box| tray)?\b.{0,20}\bfor (an hour|hours|ages|a long time|\d+ (minutes|mins|hours))\b/i },
   { flag: "urinary_blockage", re: /\b(blocked|blockage)\b/i, negatable: true },
   { flag: "urinary_blockage", re: /\b(keeps going|keeps running|keeps going back|in and out of|back and forth to|living in|sitting in)\s+(\w+\s+){0,2}litter/i },
   { flag: "urinary_blockage", re: /\blitter( box| tray)?\b.{0,60}\b(cry|cries|crying|yowl\w*|scream\w*|howl\w*|meow\w* in pain|nothing)\b/i },
@@ -67,14 +83,18 @@ const RULES: Rule[] = [
   { flag: "breathing", re: /\b(can'?t|cannot|struggling to|trouble|difficulty|hard to|stopped)\s+(\w+\s+){0,1}breath/i },
   { flag: "breathing", re: /\b(not|isn'?t) breathing\b(?!\s+(fast|hard|heavily|heavy|quickly|rapidly|through|with|weird|funny|normally))/i },
   { flag: "breathing", re: /\b(gasp\w*|chok(e|es|ed|ing))\b/i, negatable: true },
+  { flag: "breathing", re: /\b(doesn'?t|does not|don'?t|do not) (seem|look|appear) to be breathing\b/i },
   { flag: "breathing", re: /\b(blue|purple|grey|gray|white|pale)\s+(gums|tongue|lips)\b/i },
   { flag: "breathing", re: /\b(gums|tongue|lips)\s+(\w+\s+){0,2}(blue|purple|grey|gray|white|pale)\b/i },
 
   // Collapse, sudden weakness, back legs.
   { flag: "collapse", re: /\b(collaps\w*|faint(ed|ing)?|passed out|unconscious|unresponsive|floppy)\b/i, negatable: true },
   { flag: "collapse", re: /\b(won'?t|can'?t|cannot|isn'?t|not)\s+(\w+\s+){0,1}(wake|wake up|stand up|get up|walk|move)\b/i },
+  { flag: "collapse", re: /\b(can'?t|cannot|unable to|won'?t|isn'?t able to|not able to)\s+(\w+\s+){0,1}stand\b/i },
+  { flag: "collapse", re: /\b(is|'s|went|gone|seems|looks|lying|laying)\s+(all |completely |totally )?(limp|floppy)\b/i },
+  { flag: "collapse", re: /\b(not|isn'?t|is not|stopped|won'?t (stop|be))\s+(moving|responding|responsive)\b/i },
   { flag: "collapse", re: /\b(paraly\w*|dragging (his|her|their|its) (back |hind )?legs?)\b/i },
-  { flag: "collapse", re: /\b(back|hind) legs?\b.{0,40}\b(not working|stopped working|cold|dragging|gave out|give out|won'?t work)\b/i },
+  { flag: "collapse", re: /\b(back|hind) legs?\b.{0,40}\b(not working|(aren'?t|are not|isn'?t|is not) working|stopped working|cold|dragging|gave out|give out|won'?t work)\b/i },
 
   // Seizures.
   { flag: "seizure", re: /\b(seiz\w*|convuls\w*)\b/i, negatable: true },
@@ -85,9 +105,11 @@ const RULES: Rule[] = [
   { flag: "poisoning", re: new RegExp(`\\b${EXPOSURE}\\b.{0,60}\\b${TOXIN}\\b`, "i") },
   { flag: "poisoning", re: new RegExp(`\\b${TOXIN}\\b.{0,60}\\b${EXPOSURE}\\b`, "i") },
   { flag: "poisoning", re: /\bpoison(ed|ing)\b/i, negatable: true },
+  { flag: "poisoning", re: new RegExp(`\\b${GIVEN}\\b.{0,50}\\b${GIVEN_TOXIN}\\b`, "i") },
 
   // Not eating for a day or more.
-  { flag: "not_eating", re: /\b(not|hasn'?t|has not|haven'?t|won'?t|isn'?t|didn'?t|refus\w*|stopped|no interest in|off (his|her|their|its))\s+(\w+\s+){0,1}(eat|eating|ate|eaten|food|touched (his|her|their|its) food)\b.{0,50}\b(\d+\s*(days?|hours?|hrs?)|(two|three|four|five|a couple of|couple of|several|a few)\s+days?|a (whole |full )?day|all day|since yesterday|since (last night|this morning|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|24)/i },
+  { flag: "not_eating", re: new RegExp(`\\b(not|hasn'?t|has not|haven'?t|won'?t|isn'?t|didn'?t|refus\\w*|stopped|no interest in|off (his|her|their|its))\\s+(\\w+\\s+){0,1}(eat|eating|ate|eaten|food|touched (his|her|their|its) food)\\b.{0,50}\\b${DURATION}`, "i") },
+  { flag: "not_eating", re: new RegExp(`\\b(no appetite|off (his|her|their|its) food|off food|no food|ate nothing|eaten nothing|eating nothing|(hasn'?t|not|won'?t) (eaten|eat|touched) (anything|a thing|a bite))\\b.{0,40}\\b${DURATION}`, "i") },
   { flag: "not_eating", re: /\b(\d+|two|three|four|five|a couple of|several|a few)\s+days?\b.{0,40}\b(without|no)\s+(eating|food)\b/i },
 
   // Repeated vomiting.
@@ -113,7 +135,9 @@ export function detectRedFlags(message: string): FlagId[] {
     if (found.has(rule.flag) || rule.unless?.test(text)) continue;
     const re = new RegExp(rule.re.source, rule.re.flags.includes("g") ? rule.re.flags : `${rule.re.flags}g`);
     for (const m of text.matchAll(re)) {
-      if (rule.negatable && NEGATED_BEFORE.test(text.slice(Math.max(0, m.index - 24), m.index))) continue;
+      const before = text.slice(Math.max(0, m.index - 24), m.index);
+      // "Hasn't stopped bleeding", "won't quit panting": the sign is still going on (audit, 15 Nov).
+      if (rule.negatable && NEGATED_BEFORE.test(before) && !/\b(stop|stops|stopped|stopping|quit|quits)\s+$/i.test(before)) continue;
       found.add(rule.flag);
       break;
     }
@@ -121,6 +145,9 @@ export function detectRedFlags(message: string): FlagId[] {
   // A breathing count she quotes: over 30 a minute at rest is red (decision 7).
   for (const m of text.matchAll(/\b(\d{2,3})\s*(breaths?|bpm|times)?\s*(a|per|\/)\s*(minute|min)\b|\b(\d{2,3})\s*bpm\b/gi)) {
     if (Number(m[1] ?? m[5]) > 30) found.add("breathing");
+  }
+  for (const m of text.matchAll(/\b(breathing|respiratory|resting breathing|breath) rate\s*(is|was|of|:|=|at)?\s*(about |around |roughly )?(\d{2,3})\b/gi)) {
+    if (Number(m[4]) > 30) found.add("breathing");
   }
   for (const m of text.matchAll(/\b(\d{2})\s*breaths?\s*in\s*(30|thirty)\s*sec/gi)) {
     if (Number(m[1]) * 2 > 30) found.add("breathing");
