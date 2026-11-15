@@ -38,7 +38,7 @@ export default function SubscriptionTerms() {
       <p>You can cancel any time, in a few taps:</p>
       <List
         items={[
-          <><b>In the app:</b> open Account, tap Manage or cancel membership, and follow the steps.</>,
+          <><b>In the app:</b> open Account, tap Cancel membership, and follow the steps.</>,
           <><b>On our website:</b> sign in to your account at trypurestream.com and cancel your AquaOne Health subscription.</>,
         ]}
       />

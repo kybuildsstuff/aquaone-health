@@ -31,9 +31,8 @@ const FAQ: { q: string; a: React.ReactNode }[] = [
     q: "How do I cancel?",
     a: (
       <>
-        In the app, open <b>Account</b>, then <b>Manage or cancel membership</b>. That takes you to your PureStream account, where you sign in with the
-        same email and choose Cancel subscription. Cancel before your free month ends and you&apos;re never charged. Either way, you keep access to the
-        end of the time you already have. Full details are in the{" "}
+        In the app, open <b>Account</b>, tap <b>Cancel membership</b> and follow the steps. It takes a minute, with no calls or forms. Cancel before
+        your free month ends and you&apos;re never charged. Either way, you keep access to the end of the time you already have. Full details are in the{" "}
         <Link href="/subscription-terms" className="font-semibold text-blue">Subscription terms</Link>.
       </>
     ),
