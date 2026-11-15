@@ -33,13 +33,14 @@ export function emailable(m: Pick<EmailMember, "email" | "shopify_customer_id">)
   return !/\.invalid$/i.test(m.email.trim());
 }
 
-// Trial-ending: sent once, by the daily run, when her free month ends more than 1 and at most
-// 3 days from now. With one run a day the first run inside the window is the one 2-3 days out;
-// the extra day only catches a missed run. email_log's unique claim makes it exactly once.
+// Trial-ending: sent once, by the daily run, when her free month ends more than 7 and at most
+// 9 days from now, so the reminder always lands at least 7 days before the first charge (Visa's
+// free-trial rule; Ky, 16 Nov). With one run a day the first run inside the window is 8-9 days
+// out; the second day only catches a late or missed run. email_log's unique claim makes it once.
 export function trialEndingWindow(now: Date): { after: string; atMost: string } {
   return {
-    after: new Date(now.getTime() + 24 * HOUR).toISOString(),
-    atMost: new Date(now.getTime() + 72 * HOUR).toISOString(),
+    after: new Date(now.getTime() + 7 * 24 * HOUR).toISOString(),
+    atMost: new Date(now.getTime() + 9 * 24 * HOUR).toISOString(),
   };
 }
 
@@ -220,7 +221,7 @@ export function oneThing(cats: SummaryCat[], month: string): string {
   return `Keep the daily check-ins going in ${month}. A steady record is what makes a change easy to spot.`;
 }
 
-export function monthlySummaryEmail(cats: SummaryCat[], opts: { nextMonth: string; checkInsTotal: number; days: number; trialCharge?: { date: string } | null }): Message {
+export function monthlySummaryEmail(cats: SummaryCat[], opts: { nextMonth: string; checkInsTotal: number; days: number }): Message {
   const names = cats.map((c) => c.name);
   const who = names.length <= 1 ? (names[0] ?? "Your cat") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
   const steady = cats.every((c) => c.steady);
@@ -232,15 +233,12 @@ export function monthlySummaryEmail(cats: SummaryCat[], opts: { nextMonth: strin
   const catBlocks = cats
     .map((c) => `<div style="margin:14px 0 6px;font-size:13px;font-weight:600;color:#FFFFFF;text-align:left">${esc(c.name)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="6" style="margin:0 -6px"><tr>${tile("Drinking", c.drinking, c.drinking === "Normal")}${tile("Weight", c.weight, c.steady)}${tile("Breathing", c.breathing, c.steady && c.breathing !== "Not counted")}</tr></table>`)
     .join("");
-  const billing = opts.trialCharge
-    ? `<span style="color:#5B6478">Your free month ends ${esc(opts.trialCharge.date)}. From then it's ${PRICE} every 30 days; there's nothing to do to keep it. To stop, open Account in the app and tap <b>Cancel membership</b> before ${esc(opts.trialCharge.date)}.</span>`
-    : null;
   const html = layout({
     preheader: `${intro} One thing for ${opts.nextMonth}: ${thing}`,
     heading: headline,
     intro: `${esc(intro)}${catBlocks}`,
     button: { label: "Open the vet report", href: report },
-    panels: [`${label(`ONE THING FOR ${opts.nextMonth.toUpperCase()}`)}${esc(thing)}`, ...(billing ? [billing] : []), `<span style="color:#8A93A8;font-size:13px">You're getting this once a month as an AquaOne Health member. Turn it off in the app under Account, then Emails.</span>`],
+    panels: [`${label(`ONE THING FOR ${opts.nextMonth.toUpperCase()}`)}${esc(thing)}`, `<span style="color:#8A93A8;font-size:13px">You're getting this once a month as an AquaOne Health member. Turn it off in the app under Account, then Emails.</span>`],
   });
   const text = [
     headline,
@@ -252,7 +250,6 @@ export function monthlySummaryEmail(cats: SummaryCat[], opts: { nextMonth: strin
     `One thing for ${opts.nextMonth}: ${thing}`,
     "",
     `Open the vet report: ${report}`,
-    ...(opts.trialCharge ? ["", `Your free month ends ${opts.trialCharge.date}. From then it's ${PRICE} every 30 days; there's nothing to do to keep it. To stop, open Account in the app and tap Cancel membership before ${opts.trialCharge.date}.`] : []),
     "",
     "You're getting this once a month as an AquaOne Health member. Turn it off in the app under Account, then Emails.",
   ].join("\n");

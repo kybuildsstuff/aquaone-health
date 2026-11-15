@@ -19,7 +19,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { banner, reasonHeadline } from "@/lib/kidney-watch-copy";
 import type { KwReason, KwStatus } from "@/lib/kidney-watch";
 import type { Pronoun } from "@/lib/cat";
-import { alertEmail, longDate, monthlyDue, monthlyKind, monthlySummaryEmail, nudgeDue, nudgeKind, nudgeEmail, nextChargeAt, type SummaryCat } from "@/lib/email";
+import { alertEmail, monthlyDue, monthlyKind, monthlySummaryEmail, nudgeDue, nudgeKind, nudgeEmail, nextChargeAt, type SummaryCat } from "@/lib/email";
 import { loadReportData } from "@/lib/report.server";
 
 // Sending the app's emails through Resend, each logged in email_log and each sent at most once
@@ -272,14 +272,8 @@ export async function runRetentionEmails(now = new Date(), opts: { onlyEmails?: 
         if (rows.length) {
           const charge = nextChargeAt(m)!;
           const nextMonth = new Intl.DateTimeFormat("en-US", { timeZone: tz, month: "long" }).format(new Date(new Date(charge).getTime() + 86_400_000));
-          // In the free month this email also carries the billing notice, and counts as the trial-ending
-          // email, so she gets one email that week rather than two.
-          const trialCharge = m.status === "trial" ? { date: longDate(charge, tz) } : null;
-          const outcome = await sendOnce(m, monthlyKind(m), monthlySummaryEmail(rows, { nextMonth, checkInsTotal: total, days, trialCharge }));
+          const outcome = await sendOnce(m, monthlyKind(m), monthlySummaryEmail(rows, { nextMonth, checkInsTotal: total, days }));
           count(summary.monthly, outcome);
-          if (outcome === "sent" && trialCharge) {
-            await admin.from("email_log").insert({ member_id: m.id, to_email: m.email, kind: "trial_ending", status: "sent", provider_id: "in-monthly-summary" });
-          }
         }
       }
 

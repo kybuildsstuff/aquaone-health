@@ -50,7 +50,7 @@ export function statusLine(s: KwStatus, cat: CatWords) {
       if (s.reasons.includes("drinking_more")) parts.push(`Drinking is above ${cat.name}'s normal.`);
       if (s.reasons.includes("drinking_less")) parts.push(`Drinking is below ${cat.name}'s normal.`);
       if (s.reasons.includes("weight_down_5pct")) parts.push(`Weight is down ${Math.abs(s.weight_change_pct ?? 0)}% in 4 weeks.`);
-      return { title: "Worth a vet check", sub: parts.join(" ") };
+      return { title: "Worth a vet check", sub: `${parts.join(" ")} Based on your check-ins.` };
     }
     case "learning": {
       const left = Math.max(0, 7 - s.recent_checkins);
@@ -74,7 +74,7 @@ export function statusLine(s: KwStatus, cat: CatWords) {
 function steadySub(s: KwStatus, name: string) {
   const judged = ["Drinking", ...(s.weight_change_pct != null ? ["weight"] : []), ...(s.latest_breaths != null ? ["breathing"] : [])];
   const list = judged.length === 1 ? judged[0] : `${judged.slice(0, -1).join(", ")} and ${judged[judged.length - 1]}`;
-  return `${list} ${judged.length === 1 ? "is" : "are all"} within ${name}'s normal.`;
+  return `${list} ${judged.length === 1 ? "is" : "are all"} within ${name}'s normal. Based on your check-ins.`;
 }
 
 const NUMBER_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven"];

@@ -177,11 +177,11 @@ describe("welcome email", () => {
 
 describe("trial-ending email", () => {
   it("each trial ending soon gets exactly one, across consecutive daily runs; active, cancelled and TEST get none", async () => {
-    const soon = await addMember("ends-2d", { trial_ends_at: at(NOW + 2.5 * DAY) });
-    const later = await addMember("ends-5d", { trial_ends_at: at(NOW + 5.2 * DAY) });
-    const active = await addMember("active", { status: "active", trial_ends_at: at(NOW + 2.5 * DAY), paid_through: at(NOW + 2.5 * DAY) });
-    const cancelled = await addMember("cancelled", { status: "cancelled", trial_ends_at: at(NOW + 2.5 * DAY) });
-    const test = await addMember("test-trial", { shopify_customer_id: "TEST", trial_ends_at: at(NOW + 2.5 * DAY) });
+    const soon = await addMember("ends-8d", { trial_ends_at: at(NOW + 8.5 * DAY) });
+    const later = await addMember("ends-11d", { trial_ends_at: at(NOW + 11.2 * DAY) });
+    const active = await addMember("active", { status: "active", trial_ends_at: at(NOW + 8.5 * DAY), paid_through: at(NOW + 8.5 * DAY) });
+    const cancelled = await addMember("cancelled", { status: "cancelled", trial_ends_at: at(NOW + 8.5 * DAY) });
+    const test = await addMember("test-trial", { shopify_customer_id: "TEST", trial_ends_at: at(NOW + 8.5 * DAY) });
     const scope = [soon, later, active, cancelled, test].map((m) => m.mail);
     // Welcomes are not under test here: mark them sent so the catch-up stays out of the way.
     await admin.from("email_log").insert([soon, later, active, cancelled].map((m) => ({ member_id: m.id, to_email: m.mail, kind: "welcome", status: "sent" })));

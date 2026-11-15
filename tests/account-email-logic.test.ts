@@ -103,7 +103,7 @@ const member = (over: Partial<EmailMember> = {}): EmailMember => ({
   email: "jane@example.com",
   shopify_customer_id: "123",
   status: "trial",
-  trial_ends_at: iso(NOW.getTime() + 2.5 * day),
+  trial_ends_at: iso(NOW.getTime() + 8.5 * day),
   paid_through: null,
   created_at: iso(NOW.getTime() - 27.5 * day),
   ...over,
@@ -124,14 +124,14 @@ describe("who gets emails", () => {
   });
 
   // Property: with one run a day at any time of day, every trial falls in the window on at
-  // least one run (no gaps), the first such run is 2-3 days before it ends, and a trial is
-  // in the window on at most three runs (email_log's claim turns that into exactly one send).
-  it("the daily window has no gaps and first fires 2-3 days out", () => {
+  // least one run (no gaps), the first such run is 8-9 days before it ends (never under 7), and a
+  // trial is in the window on at most three runs (email_log's claim turns that into exactly one send).
+  it("the daily window has no gaps and first fires at least 7 days out", () => {
     let seed = 7;
     const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     for (let i = 0; i < 2000; i++) {
       const firstRun = NOW.getTime() + rand() * day;
-      const ends = firstRun + 4 * day + rand() * 20 * day;
+      const ends = firstRun + 9 * day + rand() * 18 * day;
       const m = member({ trial_ends_at: iso(ends) });
       const due: number[] = [];
       for (let k = 0; k < 30; k++) {
@@ -140,8 +140,9 @@ describe("who gets emails", () => {
       }
       expect(due.length).toBeGreaterThanOrEqual(1);
       expect(due.length).toBeLessThanOrEqual(3);
-      expect(due[0]).toBeGreaterThan(1.9 * day);
-      expect(due[0]).toBeLessThanOrEqual(3 * day);
+      expect(due[0]).toBeGreaterThan(7.95 * day);
+      expect(due[0]).toBeLessThanOrEqual(9 * day);
+      for (const d of due) expect(d).toBeGreaterThan(7 * day);
     }
   });
 });

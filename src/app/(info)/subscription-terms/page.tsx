@@ -20,7 +20,7 @@ export default function SubscriptionTerms() {
       <ol className="flex list-decimal flex-col gap-1.5 pl-5">
         <li><b>Your first 30 days are free.</b> AquaOne Health is added at $0 when you buy an AquaOne with the AquaOne Health option switched on.</li>
         <li><b>Then $19.95 every 30 days.</b> After your free month, your membership renews automatically at $19.95 every 30 days, plus any sales tax that applies where you live, until you cancel.</li>
-        <li><b>We remind you first.</b> We email you before your first charge, with the date and the price, so you have time to decide.</li>
+        <li><b>We remind you first.</b> We email you at least 7 days before your first charge, with the date and the price, so you have time to decide.</li>
         <li><b>Cancel any time.</b> Cancel before your free month ends and you&apos;re never charged.</li>
       </ol>
 
@@ -57,7 +57,7 @@ export default function SubscriptionTerms() {
 
       <H2>Refunds</H2>
       <p>
-        Because we email you before your first charge and you can cancel at any time before it, <b>membership charges are non-refundable</b>,
+        Because we email you at least 7 days before your first charge and you can cancel at any time before it, <b>membership charges are non-refundable</b>,
         including renewals and any unused part of a 30-day period.
       </p>
       <p>

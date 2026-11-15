@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { loadToday } from "@/lib/screens.server";
 import { banner } from "@/lib/kidney-watch-copy";
-import { words } from "@/lib/cat";
 import { Drop } from "@/components/ui";
 import { TabScreen } from "@/components/TabBar";
 import { AlertBanner } from "@/components/watch";
@@ -20,7 +19,6 @@ export default async function Today() {
   if (!t) redirect("/onboarding");
 
   const { cat, status } = t;
-  const w = words(cat.pronoun);
   const alert = banner(status, cat);
   const firstDay = t.dayNumber <= 1;
   const learning = status.status === "learning";
@@ -78,7 +76,7 @@ export default async function Today() {
                 ))}
               </div>
               <span className={`text-[13px] leading-4 font-semibold ${status.status === "steady" ? "text-green" : status.status === "red" ? "text-red" : "text-[#B07A00]"}`}>
-                {status.status === "steady" ? `Steady, in ${w.poss} normal` : status.status === "red" ? "Go to a vet now" : "Worth a vet check"}
+                {status.status === "steady" ? "Steady, based on your check-ins" : status.status === "red" ? "Go to a vet now" : "Worth a vet check"}
               </span>
             </Link>
             <div className="flex flex-1 flex-col gap-2.5 rounded-[22px] bg-lilac-soft p-4">

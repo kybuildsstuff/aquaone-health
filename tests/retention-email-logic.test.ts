@@ -92,12 +92,10 @@ describe("templates", () => {
     }
   });
 
-  it("monthly summary in the free month carries the billing notice, so it can stand in for the trial-ending email", () => {
-    const e = monthlySummaryEmail([cat()], { nextMonth: "December", checkInsTotal: 27, days: 30, trialCharge: { date: "Wednesday, December 16" } });
+  it("monthly summary carries no billing notice (the 7-day reminder does that job; Ky, 16 Nov)", () => {
+    const e = monthlySummaryEmail([cat()], { nextMonth: "December", checkInsTotal: 27, days: 30 });
     for (const body of [e.html, e.text]) {
-      expect(body).toContain("Your free month ends Wednesday, December 16");
-      expect(body).toContain("$19.95 every 30 days");
-      expect(body).toMatch(/Cancel membership/);
+      expect(body).not.toMatch(/free month ends|\$19\.95|Cancel membership/);
     }
   });
 
