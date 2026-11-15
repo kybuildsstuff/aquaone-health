@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { shrinkPhoto } from "@/lib/photo-client";
+import { PHOTO_MAX_BYTES } from "@/lib/safe";
 import { Drop } from "@/components/ui";
 import { BackLink } from "@/components/watch";
 import { EMERGENCY_VET_MAPS_URL, telHref, vetLabel, words, type Pronoun } from "@/lib/cat";
@@ -10,6 +12,7 @@ import {
   withQuestion,
   type ChatItem,
   MAX_QUESTION_CHARS,
+  PHOTO_DEFAULT_QUESTION,
   POISON_LINE,
   URGENT_FOLLOW_UP,
   askErrorMessage,
@@ -31,6 +34,23 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
   const [error, setError] = useState<string | null>(null);
   const [remaining, setRemaining] = useState(initialRemaining);
   const [revealing, setRevealing] = useState<string | null>(null);
+  // A photo picked for the next question (shrunk on the phone), with a local preview URL.
+  const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function pickPhoto(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    const blob = await shrinkPhoto(file, "ask_photo");
+    if (blob.size > PHOTO_MAX_BYTES) {
+      setError(askErrorMessage(413, "too_large", cat.name));
+      return;
+    }
+    setPhoto((old) => {
+      if (old) URL.revokeObjectURL(old.url);
+      return { blob, url: URL.createObjectURL(blob) };
+    });
+  }
   const scroller = useRef<HTMLDivElement>(null);
   const w = words(cat.pronoun);
 
@@ -45,7 +65,8 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
     items.length === 0 || (last && revealing === last.id) ? [] : last?.role === "assistant" && !last.pending ? (last.flags.length ? [URGENT_FOLLOW_UP] : parseAnswer(last.text).followUps) : [];
 
   async function ask(question: string) {
-    const q = question.trim();
+    const sending = photo;
+    const q = question.trim() || (sending ? PHOTO_DEFAULT_QUESTION : "");
     if (!q || busy) return;
     if (q.length > MAX_QUESTION_CHARS) {
       setError(askErrorMessage(400, "too_long", cat.name));
@@ -56,7 +77,9 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
     setDraft("");
     const now = new Date().toISOString();
     const pendingId = `pending-${now}`;
-    setItems((xs) => withQuestion(xs, q, now));
+    setItems((xs) => withQuestion(xs, q, now, sending?.url));
+    setPhoto(null);
+    if (fileRef.current) fileRef.current.value = "";
     const update = (patch: Partial<ChatItem>) =>
       setItems((xs) => {
         const has = xs.some((x) => x.id === pendingId);
@@ -66,10 +89,18 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
 
     let res: Response;
     try {
-      res = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: q }) });
+      if (sending) {
+        const form = new FormData();
+        form.append("message", question.trim());
+        form.append("photo", sending.blob, "photo.jpg");
+        res = await fetch("/api/ask", { method: "POST", body: form });
+      } else {
+        res = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: q }) });
+      }
     } catch {
       setError(askErrorMessage(null, undefined, cat.name));
-      setDraft(q);
+      setDraft(question.trim());
+      setPhoto(sending);
       setItems((xs) => xs.filter((x) => x.id !== `q-${now}` && x.id !== pendingId));
       setBusy(false);
       return;
@@ -78,7 +109,10 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
       const body = await res.json().catch(() => ({}));
       setError(askErrorMessage(res.status, body.error, cat.name));
       if (body.error === "daily_cap") setRemaining(0);
-      else setDraft(q);
+      else {
+        setDraft(question.trim());
+        setPhoto(sending);
+      }
       setItems((xs) => xs.filter((x) => x.id !== `q-${now}` && x.id !== pendingId));
       setBusy(false);
       return;
@@ -167,7 +201,7 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
               </p>
             ) : null}
             {m.role === "user" ? (
-              <UserBubble text={m.text} />
+              <UserBubble text={m.text} photoUrl={m.photoUrl} />
             ) : m.fresh && !m.pending ? (
               <TypedAnswer item={m} cat={cat} onGrow={toBottom} onDone={() => setRevealing((r) => (r === m.id ? null : r))} />
             ) : (
@@ -200,23 +234,59 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
             ))}
           </div>
         ) : null}
+        {photo ? (
+          <div className="flex items-center gap-3 px-1">
+            <span className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo.url} alt="Photo to send" className="size-16 rounded-xl object-cover" />
+              <button
+                type="button"
+                onClick={() => {
+                  URL.revokeObjectURL(photo.url);
+                  setPhoto(null);
+                  if (fileRef.current) fileRef.current.value = "";
+                }}
+                aria-label="Remove photo"
+                className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-navy text-white"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+                  <path d="M2 2l6 6M8 2l-6 6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </button>
+            </span>
+            <p className="text-[13px] leading-4.5 text-slate">Add a question, or just send. I&apos;ll tell you what I see.</p>
+          </div>
+        ) : null}
         <form
           onSubmit={(e) => {
             e.preventDefault();
             ask(draft);
           }}
-          className="flex h-13.5 shrink-0 items-center gap-2.5 rounded-full border border-line bg-white pr-2 pl-4.5"
+          className="flex h-13.5 shrink-0 items-center gap-2 rounded-full border border-line bg-white pr-2 pl-2"
         >
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={busy}
+            aria-label="Add a photo"
+            className="flex size-9.5 shrink-0 items-center justify-center rounded-full bg-lilac-soft disabled:opacity-40"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+              <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7H8l1.5-2h5L16 7h2.5A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" fill="none" stroke="#5369EE" strokeWidth="2" strokeLinejoin="round" />
+              <circle cx="12" cy="13" r="3.2" fill="none" stroke="#5369EE" strokeWidth="2" />
+            </svg>
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder={remaining === 0 ? "Back tomorrow…" : `Ask anything about ${cat.name}…`}
+            placeholder={remaining === 0 ? "Back tomorrow…" : photo ? "Add a question (optional)…" : `Ask anything about ${cat.name}…`}
             aria-label={`Ask anything about ${cat.name}`}
             enterKeyHint="send"
             maxLength={MAX_QUESTION_CHARS}
             className="min-w-0 flex-1 bg-transparent text-base leading-5 outline-none placeholder:text-[#8A93A8]"
           />
-          <button type="submit" disabled={busy || !draft.trim()} aria-label="Send" className="flex size-9.5 shrink-0 items-center justify-center rounded-full bg-navy disabled:opacity-40">
+          <button type="submit" disabled={busy || (!draft.trim() && !photo)} aria-label="Send" className="flex size-9.5 shrink-0 items-center justify-center rounded-full bg-navy disabled:opacity-40">
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
               <path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -230,9 +300,13 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
   );
 }
 
-function UserBubble({ text }: { text: string }) {
+function UserBubble({ text, photoUrl }: { text: string; photoUrl?: string }) {
   return (
-    <div className="flex justify-end">
+    <div className="flex flex-col items-end gap-1.5">
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photoUrl} alt="Photo she sent" className="max-h-64 max-w-[62%] rounded-[18px] object-cover" />
+      ) : null}
       <p className="max-w-[78%] rounded-t-[20px] rounded-br-md rounded-bl-[20px] bg-navy px-4 py-3 text-base leading-5.5 whitespace-pre-wrap text-white">{text}</p>
     </div>
   );

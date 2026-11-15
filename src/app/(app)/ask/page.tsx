@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getContext } from "@/lib/app-data.server";
-import { questionsToday } from "@/lib/ask.server";
+import { questionsToday, signPhotos } from "@/lib/ask.server";
 import { DAILY_QUESTION_CAP, detectRedFlags, type FlagId } from "@/lib/ask";
 import AskChat, { type ChatItem } from "./AskChat";
 
@@ -14,7 +14,7 @@ export default async function AskPage() {
   if (!ctx) redirect("/onboarding");
 
   const [{ data, error }, used] = await Promise.all([
-    supabase.from("chat_messages").select("id, role, content, flagged_urgent, created_at").eq("cat_id", ctx.cat.id).order("created_at", { ascending: false }).limit(60),
+    supabase.from("chat_messages").select("id, role, content, flagged_urgent, created_at, photo_path").eq("cat_id", ctx.cat.id).order("created_at", { ascending: false }).limit(60),
     questionsToday(supabase, ctx),
   ]);
   if (error) throw new Error(`chat_messages read failed: ${error.message}`);
@@ -22,6 +22,7 @@ export default async function AskPage() {
   // An urgent answer redraws the card the rules chose for the question before it
   // ("general" when the model itself said it can't wait).
   const rows = (data ?? []).reverse();
+  const signed = await signPhotos(rows.map((m) => m.photo_path).filter((x): x is string => Boolean(x)));
   const items: ChatItem[] = rows.map((m, i) => {
     let flags: FlagId[] = [];
     if (m.role === "assistant" && m.flagged_urgent) {
@@ -29,7 +30,8 @@ export default async function AskPage() {
       flags = detectRedFlags(question);
       if (!flags.length) flags = ["general"];
     }
-    return { id: m.id, role: m.role, text: m.content, at: m.created_at, flags };
+    const photoUrl = m.photo_path ? signed.get(m.photo_path) : undefined;
+    return { id: m.id, role: m.role, text: m.content, at: m.created_at, flags, ...(photoUrl ? { photoUrl } : {}) };
   });
 
   return (

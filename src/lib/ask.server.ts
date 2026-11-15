@@ -14,6 +14,9 @@ import type { KwStatus } from "@/lib/kidney-watch";
 import {
   DAILY_QUESTION_CAP,
   MAX_QUESTION_CHARS,
+  PHOTO_DAILY_CAP,
+  PHOTO_DEFAULT_QUESTION,
+  takePhotoNote,
   detectRedFlags,
   guardAnswer,
   takeUrgentMarker,
@@ -21,7 +24,10 @@ import {
   primaryFlag,
   type FlagId,
 } from "@/lib/ask";
-import { AskModelError, type AskModel, type AskTurn } from "@/lib/ask-model.server";
+import { AskModelError, type AskImage, type AskModel, type AskTurn } from "@/lib/ask-model.server";
+import { PHOTO_MAX_BYTES, PHOTO_TYPES, type PhotoType } from "@/lib/safe";
+
+export const ASK_PHOTO_BUCKET = "ask-photos";
 
 // POST /api/ask, end to end. Order matters and is the safety design (decision 5):
 //   signed in -> member -> valid -> her cat -> red-flag rules on her message ->
@@ -35,6 +41,24 @@ import { AskModelError, type AskModel, type AskTurn } from "@/lib/ask-model.serv
 
 export const askSchema = z.object({ message: z.string().trim().min(1) });
 
+// A question arrives as JSON ({message}) or, with a photo, as multipart (fields "message" and
+// "photo"). A photo with no words gets the default question.
+type Incoming = { ok: true; message: string; photo: AskImage | null } | { ok: false; status: number; error: string };
+async function readAsk(request: Request): Promise<Incoming> {
+  if (!(request.headers.get("content-type") ?? "").includes("multipart/form-data")) {
+    const parsed = askSchema.safeParse(await request.json().catch(() => null));
+    return parsed.success ? { ok: true, message: parsed.data.message, photo: null } : { ok: false, status: 400, error: "invalid" };
+  }
+  const form = await request.formData().catch(() => null);
+  const file = form?.get("photo");
+  const text = String(form?.get("message") ?? "").trim();
+  if (!(file instanceof Blob)) return text ? { ok: true, message: text, photo: null } : { ok: false, status: 400, error: "invalid" };
+  if (!PHOTO_TYPES.includes(file.type as PhotoType)) return { ok: false, status: 415, error: "bad_type" };
+  if (file.size === 0 || file.size > PHOTO_MAX_BYTES) return { ok: false, status: 413, error: "too_large" };
+  const data = Buffer.from(await file.arrayBuffer()).toString("base64");
+  return { ok: true, message: text || PHOTO_DEFAULT_QUESTION, photo: { data, mediaType: file.type as PhotoType } };
+}
+
 export type AskEvent =
   | { type: "urgent"; flags: FlagId[] }
   | { type: "answer"; id: string; text: string; urgent: boolean; flags: FlagId[]; remaining: number; replaced: string | null }
@@ -47,6 +71,7 @@ export async function handleAsk(request: Request, model: AskModel): Promise<Resp
   let userId = "";
   let ctx: Ctx;
   let message: string;
+  let photo: AskImage | null = null;
   try {
     supabase = await supabaseServer();
     const { data: auth } = await supabase.auth.getUser();
@@ -60,12 +85,13 @@ export async function handleAsk(request: Request, model: AskModel): Promise<Resp
       console.error("ask_failed not_member", userId);
       return json(403, "not_member");
     }
-    const parsed = askSchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) {
-      console.error("ask_failed invalid", userId);
-      return json(400, "invalid");
+    const incoming = await readAsk(request);
+    if (!incoming.ok) {
+      console.error(`ask_failed ${incoming.error}`, userId);
+      return json(incoming.status, incoming.error);
     }
-    message = parsed.data.message;
+    message = incoming.message;
+    photo = incoming.photo;
     if (message.length > MAX_QUESTION_CHARS) {
       console.error("ask_failed too_long", userId, message.length);
       return json(400, "too_long");
@@ -89,9 +115,14 @@ export async function handleAsk(request: Request, model: AskModel): Promise<Resp
       console.error("ask_failed daily_cap", userId, used);
       return json(429, "daily_cap", { cap: DAILY_QUESTION_CAP });
     }
+    if (photo && flags.length === 0 && (await photosToday(supabase, ctx)) >= PHOTO_DAILY_CAP) {
+      console.error("ask_failed photo_cap", userId);
+      return json(429, "photo_cap", { cap: PHOTO_DAILY_CAP });
+    }
     const atCap = used >= DAILY_QUESTION_CAP;
-    await saveMessage(ctx.cat.id, "user", message, flags.length > 0);
-    return streamAnswer({ supabase, ctx, message, flags, model, atCap, remaining: Math.max(0, DAILY_QUESTION_CAP - used - 1), userId });
+    const photoPath = photo ? await storePhoto(ctx.cat.id, photo) : null;
+    const questionId = await saveMessage(ctx.cat.id, "user", message, flags.length > 0, photoPath);
+    return streamAnswer({ supabase, ctx, message, flags, model, atCap, remaining: Math.max(0, DAILY_QUESTION_CAP - used - 1), userId, photo, questionId });
   } catch (e) {
     console.error("ask_failed exception", userId, e instanceof Error ? e.message : String(e));
     if (flags.length) {
@@ -111,6 +142,8 @@ function streamAnswer(a: {
   atCap: boolean;
   remaining: number;
   userId: string;
+  photo: AskImage | null;
+  questionId: string;
 }): Response {
   const encoder = new TextEncoder();
   const body = new ReadableStream<Uint8Array>({
@@ -135,9 +168,16 @@ function streamAnswer(a: {
             system: SYSTEM_PROMPT,
             context: await buildContext(a.supabase, ctx, kw, a.flags),
             messages: await historyFor(a.supabase, ctx.cat.id, a.message),
+            ...(a.photo ? { image: a.photo } : {}),
           });
-          // The model's own "this can't wait" marker is a second net under the rules.
-          const marked = takeUrgentMarker(raw);
+          // With a photo, the model's one-line description is kept on her question (it may come
+          // before or after the URGENT line), so later questions can refer back to it.
+          const first = takePhotoNote(raw);
+          const marked0 = takeUrgentMarker(first.text);
+          const second = takePhotoNote(marked0.text);
+          const marked = { urgent: marked0.urgent, text: second.text };
+          const note = first.note ?? second.note;
+          if (a.photo && note) await saveNote(a.questionId, note);
           if (marked.urgent && !urgent) {
             urgent = true;
             flags = ["general"];
@@ -204,14 +244,55 @@ export function localMidnightUtc(tz: string, at: Date = new Date()): Date {
   return new Date(guess);
 }
 
+// Her photo questions since her midnight (10 a day, inside the 30-question cap).
+export async function photosToday(supabase: SupabaseClient, ctx: Ctx, at: Date = new Date()): Promise<number> {
+  const { count, error } = await supabase
+    .from("chat_messages")
+    .select("id", { count: "exact", head: true })
+    .eq("cat_id", ctx.cat.id)
+    .eq("role", "user")
+    .not("photo_path", "is", null)
+    .gte("created_at", localMidnightUtc(ctx.tz, at).toISOString());
+  if (error) throw new Error(`photo cap count failed: ${error.message}`);
+  return count ?? 0;
+}
+
+// The photo goes to the private bucket under her cat's id (service role; the bucket has no
+// member policies). Kept 90 days, then deleted by the daily cleanup job.
+async function storePhoto(catId: string, photo: AskImage): Promise<string> {
+  const ext = photo.mediaType.split("/")[1].replace("jpeg", "jpg");
+  const path = `${catId}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabaseAdmin().storage.from(ASK_PHOTO_BUCKET).upload(path, Buffer.from(photo.data, "base64"), { contentType: photo.mediaType });
+  if (error) throw new Error(`photo upload failed: ${error.message}`);
+  return path;
+}
+
+async function saveNote(questionId: string, note: string) {
+  const { error } = await supabaseAdmin().from("chat_messages").update({ photo_note: note }).eq("id", questionId);
+  if (error) console.error("ask_photo_note_failed", error.message);
+}
+
+// Short-lived links for the photos in her conversation (the bucket is private).
+export async function signPhotos(paths: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (!paths.length) return out;
+  const { data, error } = await supabaseAdmin().storage.from(ASK_PHOTO_BUCKET).createSignedUrls(paths, 3600);
+  if (error) {
+    console.error("ask_photo_sign_failed", error.message);
+    return out;
+  }
+  for (const d of data ?? []) if (d.path && d.signedUrl) out.set(d.path, d.signedUrl);
+  return out;
+}
+
 // Service role, justified: members can only READ their messages (migration
 // 20261114100000), so she can't delete her questions to reset the cap or write the
 // assistant's side. The cat id comes from getContext, her own row-level-security read,
 // which is what proves she owns the cat before this write.
-async function saveMessage(catId: string, role: "user" | "assistant", content: string, flaggedUrgent: boolean): Promise<string> {
+async function saveMessage(catId: string, role: "user" | "assistant", content: string, flaggedUrgent: boolean, photoPath: string | null = null): Promise<string> {
   const { data, error } = await supabaseAdmin()
     .from("chat_messages")
-    .insert({ cat_id: catId, role, content, flagged_urgent: flaggedUrgent })
+    .insert({ cat_id: catId, role, content, flagged_urgent: flaggedUrgent, ...(photoPath ? { photo_path: photoPath } : {}) })
     .select("id")
     .single();
   if (error) throw new Error(`chat_messages insert (${role}) failed: ${error.message}`);
@@ -224,14 +305,17 @@ async function historyFor(supabase: SupabaseClient, catId: string, current: stri
   const since = new Date(Date.now() - 14 * 86400000).toISOString();
   const { data, error } = await supabase
     .from("chat_messages")
-    .select("role, content, created_at")
+    .select("role, content, photo_note, created_at")
     .eq("cat_id", catId)
     .gte("created_at", since)
     .order("created_at", { ascending: false })
     .limit(21);
   if (error) throw new Error(`history read failed: ${error.message}`);
   // The newest row is the question just saved; it is added back as `current` below.
-  const rows = (data ?? []).slice(1).reverse() as { role: "user" | "assistant"; content: string }[];
+  const rows = ((data ?? []).slice(1).reverse() as { role: "user" | "assistant"; content: string; photo_note: string | null }[]).map((r) => ({
+    role: r.role,
+    content: r.photo_note ? `[She sent a photo: ${r.photo_note}]\n${r.content}` : r.content,
+  }));
   const turns: AskTurn[] = [];
   for (const r of [...rows, { role: "user" as const, content: current }]) {
     const last = turns[turns.length - 1];
@@ -330,4 +414,29 @@ Format for other answers:
 - When signs to watch for matter, add one line starting "Go to a vet now, any hour, if" and the cat's pronoun, listing the two or three most important signs, e.g. "Go to a vet now, any hour, if he strains to pee with little coming out, stops eating, or keeps vomiting."
 - Optionally end with one or two follow-up questions the owner might want to ask you next, each on its own line starting ">> " (e.g. ">> What does the test involve?"). Write them in the owner's voice, under 40 characters.
 
+Photos: she may send a photo with her question (vomit, stool, urine, a wound, an eye, skin, gums, a plant or food the cat got into, the cat itself). When there is a photo:
+- Start your reply with one line "PHOTO: " and a plain, neutral description of what the photo shows, under 15 words (e.g. "PHOTO: small pile of vomit with hair and undigested food"). If there is also an URGENT line, the URGENT line comes first and the PHOTO line second.
+- Then answer as usual, saying what you can see that matters, and what to watch for or do next. Describe; never name a disease or condition from a photo.
+- If the photo shows anything that could be an emergency (blood, a cat straining in the litter box, pale, white or blue gums, open-mouth breathing, a swollen belly, a wound, a lily or another toxic item she may have eaten), it is URGENT.
+- If you can't tell what the photo shows, say so and ask for a clearer photo or a few words.
+
 If the question isn't about cats or their care, say kindly that you can only help with the cat, and offer one cat question you could help with. You are not a vet; when a vet's judgment is needed, say so.`;
+
+export const ASK_PHOTO_KEEP_DAYS = 90;
+
+// Deletes Ask photos older than 90 days from storage and clears photo_path on their messages
+// (the question text and photo_note stay). Service role: a background job, no member involved.
+export async function deleteOldAskPhotos(now: Date = new Date()): Promise<{ deleted: number }> {
+  const cutoff = new Date(now.getTime() - ASK_PHOTO_KEEP_DAYS * 86400000).toISOString();
+  let deleted = 0;
+  for (;;) {
+    const { data, error } = await supabaseAdmin().from("chat_messages").select("id, photo_path").not("photo_path", "is", null).lt("created_at", cutoff).limit(100);
+    if (error) throw new Error(`old photo read failed: ${error.message}`);
+    if (!data?.length) return { deleted };
+    const removed = await supabaseAdmin().storage.from(ASK_PHOTO_BUCKET).remove(data.map((r) => r.photo_path as string));
+    if (removed.error) throw new Error(`photo delete failed: ${removed.error.message}`);
+    const cleared = await supabaseAdmin().from("chat_messages").update({ photo_path: null }).in("id", data.map((r) => r.id));
+    if (cleared.error) throw new Error(`photo_path clear failed: ${cleared.error.message}`);
+    deleted += data.length;
+  }
+}

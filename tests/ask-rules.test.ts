@@ -1,7 +1,7 @@
 // Ask's safety rules in code (decision 5), without the model: the red-flag detector on her
 // words, the after-model guard, the answer layout and the cap's local-midnight boundary.
 import { describe, expect, it } from "vitest";
-import { detectRedFlags, guardAnswer, parseAnswer, primaryFlag, takeUrgentMarker, urgentCopy, withQuestion, revealWords, revealMs, wordCount, type FlagId } from "../src/lib/ask";
+import { detectRedFlags, guardAnswer, parseAnswer, primaryFlag, takeUrgentMarker, urgentCopy, withQuestion, revealWords, revealMs, wordCount, takePhotoNote, type FlagId } from "../src/lib/ask";
 import { localDate } from "../src/lib/dates";
 
 // The localMidnightUtc helper lives in a server-only module; import it through the alias.
@@ -230,5 +230,20 @@ describe("typing out a checked answer", () => {
       expect(revealMs(w)).toBeGreaterThanOrEqual(600);
       expect(revealMs(w)).toBeLessThanOrEqual(2000);
     }
+  });
+});
+
+describe("photo notes (Ask that can see)", () => {
+  it("strips a leading PHOTO line and keeps it as the note", () => {
+    expect(takePhotoNote("PHOTO: a pile of vomit with hair\nWatch him today.")).toEqual({ note: "a pile of vomit with hair", text: "Watch him today." });
+    expect(takePhotoNote("**PHOTO:** a cat on a sofa\nHe looks fine.")).toEqual({ note: "a cat on a sofa", text: "He looks fine." });
+  });
+  it("leaves an answer without one untouched", () => {
+    expect(takePhotoNote("Watch him today.")).toEqual({ note: null, text: "Watch him today." });
+  });
+  it("puts her photo on her question bubble", () => {
+    const items = withQuestion([], "What's this?", "2026-11-15T01:00:00.000Z", "blob:preview");
+    expect(items[0].photoUrl).toBe("blob:preview");
+    expect(withQuestion([], "Words only", "2026-11-15T01:00:00.000Z")[0].photoUrl).toBeUndefined();
   });
 });

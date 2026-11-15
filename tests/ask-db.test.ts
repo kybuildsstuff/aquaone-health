@@ -8,7 +8,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import type { AskModel, AskModelInput } from "../src/lib/ask-model.server";
-import { DAILY_QUESTION_CAP } from "../src/lib/ask";
+import { DAILY_QUESTION_CAP, PHOTO_DAILY_CAP, PHOTO_DEFAULT_QUESTION } from "../src/lib/ask";
 
 config({ path: ".env.local", quiet: true });
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -27,6 +27,17 @@ vi.mock("@/lib/supabase/server", () => ({ supabaseServer: async () => actingAs }
 vi.mock("@/lib/ask-model.server", async (orig) => ({ ...(await orig<object>()), anthropicAskModel: () => stubModel }));
 
 const { POST } = await import("../src/app/api/ask/route");
+const { deleteOldAskPhotos, ASK_PHOTO_BUCKET } = await import("../src/lib/ask.server");
+
+// A real (tiny) PNG, sent the way the phone sends it: multipart with "message" and "photo".
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+const askWithPhoto = (message: string, photo: Blob = new Blob([PNG], { type: "image/png" })) => {
+  const form = new FormData();
+  form.append("message", message);
+  form.append("photo", photo, "photo.png");
+  return POST(new Request("http://test.local/api/ask", { method: "POST", body: form }));
+};
+const storedPhotos = async (catId: string) => ((await admin.storage.from("ask-photos").list(catId, { limit: 1000 })).data ?? []).map((o) => `${catId}/${o.name}`);
 
 type Member = { id: string; email: string; client: SupabaseClient; catId: string };
 const tag = randomUUID().slice(0, 8);
@@ -88,6 +99,8 @@ beforeEach(async () => {
 
 afterAll(async () => {
   for (const m of members) {
+    const paths = await storedPhotos(m.catId);
+    if (paths.length) await admin.storage.from("ask-photos").remove(paths);
     await admin.from("members").delete().eq("email", m.email).eq("shopify_customer_id", "TEST");
     await admin.auth.admin.deleteUser(m.id);
   }
@@ -96,8 +109,9 @@ afterAll(async () => {
   const rows = (await admin.from("members").select("id", { count: "exact", head: true }).like("email", `%-${tag}@test.invalid`)).count;
   const cats = (await admin.from("cats").select("id", { count: "exact", head: true }).in("id", ids)).count;
   const chats = (await admin.from("chat_messages").select("id", { count: "exact", head: true }).in("cat_id", ids)).count;
-  console.log(`ask residue: users ${users}, members ${rows}, cats ${cats}, chat_messages ${chats}`);
-  expect([users, rows, cats, chats]).toEqual([0, 0, 0, 0]);
+  const photos = (await Promise.all(ids.map(storedPhotos))).flat().length;
+  console.log(`ask residue: users ${users}, members ${rows}, cats ${cats}, chat_messages ${chats}, photos ${photos}`);
+  expect([users, rows, cats, chats, photos]).toEqual([0, 0, 0, 0, 0]);
 });
 
 describe("POST /api/ask", () => {
@@ -223,6 +237,85 @@ describe("POST /api/ask", () => {
     expect(res.status).toBe(200);
     await events(res);
     expect(modelCalls).toHaveLength(1);
+  });
+});
+
+describe("Ask that can see (photos)", () => {
+  it("a photo goes to the model with her question, is kept privately, and its description is saved, never shown", async () => {
+    modelReply = async () => "PHOTO: small pile of vomit with hair in it\nThat looks like a hairball with some food. Watch him today.";
+    const res = await askWithPhoto("He threw this up, worry?");
+    expect(res.status).toBe(200);
+    const ev = await events(res);
+    expect(ev.at(-1)).toMatchObject({ type: "answer", urgent: false });
+    expect(ev.at(-1).text).not.toMatch(/PHOTO:/);
+    expect(modelCalls[0].image).toMatchObject({ mediaType: "image/png" });
+    expect(modelCalls[0].image?.data).toBe(PNG.toString("base64"));
+    expect(modelCalls[0].system).toMatch(/PHOTO: /);
+
+    const rows = (await admin.from("chat_messages").select("role, content, photo_path, photo_note").eq("cat_id", a.catId).order("created_at")).data ?? [];
+    expect(rows[0]).toMatchObject({ role: "user", content: "He threw this up, worry?", photo_note: "small pile of vomit with hair in it" });
+    expect(rows[0].photo_path).toMatch(new RegExp(`^${a.catId}/.+\\.png$`));
+    expect(await storedPhotos(a.catId)).toContain(rows[0].photo_path);
+    // Private: a member can't download it directly, only through a signed link from the server.
+    const direct = await a.client.storage.from(ASK_PHOTO_BUCKET).download(rows[0].photo_path!);
+    expect(direct.error).not.toBeNull();
+  });
+
+  it("a photo with no words gets the default question", async () => {
+    modelReply = async () => "PHOTO: a grey cat lying on a sofa\nHe looks relaxed.";
+    await events(await askWithPhoto(""));
+    expect(modelCalls[0].messages.at(-1)?.content).toBe(PHOTO_DEFAULT_QUESTION);
+  });
+
+  it("an emergency in the photo: the model's URGENT line shows the card, before or after the PHOTO line", async () => {
+    modelReply = async () => "URGENT\nPHOTO: red-tinged urine clumps in a litter box\nPlease go to an emergency vet now.";
+    const ev = await events(await askWithPhoto("Is this normal?"));
+    expect(ev.map((e) => e.type)).toEqual(["urgent", "answer"]);
+    expect(ev[1].text).not.toMatch(/PHOTO:|URGENT/);
+    const note = (await admin.from("chat_messages").select("photo_note").eq("cat_id", a.catId).eq("role", "user").single()).data?.photo_note;
+    expect(note).toBe("red-tinged urine clumps in a litter box");
+  });
+
+  it("later questions see the photo's description in the conversation", async () => {
+    modelReply = async () => "PHOTO: a small scab above the left eye\nKeep an eye on it.";
+    await events(await askWithPhoto("What's this?"));
+    modelReply = async () => "Fine.";
+    await events(await ask("Is it getting better?"));
+    expect(modelCalls[1].messages[0].content).toMatch(/\[She sent a photo: a small scab above the left eye\]/);
+    expect(modelCalls[1].image).toBeUndefined();
+  });
+
+  it(`photo ${PHOTO_DAILY_CAP + 1} today is refused without the model; words still work, and an emergency photo is still answered`, async () => {
+    const rows = Array.from({ length: PHOTO_DAILY_CAP }, (_, i) => ({ cat_id: a.catId, role: "user", content: `p${i}`, photo_path: `${a.catId}/fake-${i}.jpg` }));
+    const ins = await admin.from("chat_messages").insert(rows);
+    if (ins.error) throw ins.error;
+    const capped = await askWithPhoto("And this one?");
+    expect([capped.status, (await capped.json()).error]).toEqual([429, "photo_cap"]);
+    expect(modelCalls).toHaveLength(0);
+    expect((await ask("And in words?")).status).toBe(200);
+    const urgent = await askWithPhoto("He's straining in the litter box and nothing comes out");
+    expect(urgent.status).toBe(200);
+    expect((await events(urgent))[0]).toMatchObject({ type: "urgent" });
+  });
+
+  it("a file that isn't a photo, or is too big, is refused before the model", async () => {
+    const txt = await askWithPhoto("hi", new Blob(["hello"], { type: "text/plain" }));
+    expect([txt.status, (await txt.json()).error]).toEqual([415, "bad_type"]);
+    const big = await askWithPhoto("hi", new Blob([new Uint8Array(4 * 1024 * 1024 + 1)], { type: "image/jpeg" }));
+    expect([big.status, (await big.json()).error]).toEqual([413, "too_large"]);
+    expect(modelCalls).toHaveLength(0);
+  });
+
+  it("photos older than 90 days are deleted from storage; the question and description stay", async () => {
+    modelReply = async () => "PHOTO: a food bowl\nOK.";
+    await events(await askWithPhoto("Old one"));
+    const row = (await admin.from("chat_messages").select("id, photo_path").eq("cat_id", a.catId).eq("role", "user").single()).data!;
+    await admin.from("chat_messages").update({ created_at: new Date(Date.now() - 91 * 86400000).toISOString() }).eq("id", row.id);
+    const { deleted } = await deleteOldAskPhotos();
+    expect(deleted).toBeGreaterThanOrEqual(1);
+    expect(await storedPhotos(a.catId)).not.toContain(row.photo_path);
+    const after = (await admin.from("chat_messages").select("content, photo_path, photo_note").eq("id", row.id).single()).data;
+    expect(after).toEqual({ content: "Old one", photo_path: null, photo_note: "a food bowl" });
   });
 });
 

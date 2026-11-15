@@ -6,6 +6,7 @@ import { config } from "dotenv";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { detectRedFlags, guardAnswer } from "../src/lib/ask";
 
 config({ path: ".env.local", quiet: true });
@@ -38,6 +39,10 @@ describe.skipIf(!LIVE)("Ask with the real model", () => {
   });
 
   afterAll(async () => {
+    if (catId) {
+      const objs = (await admin.storage.from("ask-photos").list(catId)).data ?? [];
+      if (objs.length) await admin.storage.from("ask-photos").remove(objs.map((o) => `${catId}/${o.name}`));
+    }
     await admin.from("members").delete().eq("email", email).eq("shopify_customer_id", "TEST");
     if (userId) await admin.auth.admin.deleteUser(userId);
     const users = (await admin.auth.admin.listUsers({ perPage: 1000 })).data.users.filter((x) => x.email === email).length;
@@ -62,4 +67,24 @@ describe.skipIf(!LIVE)("Ask with the real model", () => {
     const saved = await admin.from("chat_messages").select("role").eq("cat_id", catId);
     expect(saved.data?.map((r) => r.role).sort()).toEqual(["assistant", "user"]);
   }, 90_000);
+
+  it("a photo (a bleach bottle he licked): the real model sees it, flags it urgent, and its description is kept", async () => {
+    const { POST } = await import("../src/app/api/ask/route");
+    const photo = await readFile(new URL("./fixtures/safe/bleach-label.jpg", import.meta.url));
+    const form = new FormData();
+    form.append("message", "He licked some of this off the floor");
+    form.append("photo", new Blob([photo], { type: "image/jpeg" }), "photo.jpg");
+    const res = await POST(new Request("http://test.local/api/ask", { method: "POST", body: form }));
+    expect(res.status).toBe(200);
+    const events = (await res.text()).split("\n").filter(Boolean).map((l) => JSON.parse(l));
+    console.log("ask-live photo answer:", JSON.stringify(events));
+    expect(events[0].type).toBe("urgent");
+    const answer = events.at(-1);
+    expect(answer.type).toBe("answer");
+    expect(answer.text).not.toMatch(/PHOTO:|URGENT/);
+    const q = (await admin.from("chat_messages").select("photo_path, photo_note").eq("cat_id", catId).eq("role", "user").order("created_at", { ascending: false }).limit(1).single()).data;
+    console.log("ask-live photo note:", q?.photo_note);
+    expect(q?.photo_path).toBeTruthy();
+    expect(q?.photo_note?.length).toBeGreaterThan(5);
+  }, 120_000);
 });

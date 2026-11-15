@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORY_LABEL, PHOTO_MAX_BYTES, pickMatch, type SafetyMatch } from "@/lib/safe";
 import { SeverityBadge } from "./parts";
+import { shrinkPhoto } from "@/lib/photo-client";
 
 // The search box and camera button. While she types, matches from our list replace the tiles
 // (children); picking one, or the "not on our list" answer, logs the lookup and opens it.
@@ -89,7 +90,7 @@ export default function SafeSearch({ children }: { children: React.ReactNode }) 
     setPhotoError(null);
     setPhotoBusy(true);
     try {
-      const photo = await shrink(file);
+      const photo = await shrinkPhoto(file, "safe_photo");
       if (photo.size > PHOTO_MAX_BYTES) throw new PhotoError("too_large");
       const form = new FormData();
       form.append("photo", photo, "photo.jpg");
@@ -207,18 +208,3 @@ class PhotoError extends Error {
 
 // Phone photos are several MB; the model only needs about 1600px. Re-encoding as JPEG also turns
 // an iPhone HEIC into something the server accepts. Falls back to the original file.
-async function shrink(file: File): Promise<Blob> {
-  try {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.85));
-    if (blob && blob.size > 0) return blob;
-  } catch (e) {
-    console.error("safe_photo_resize_failed", e instanceof Error ? e.message : String(e));
-  }
-  return file;
-}

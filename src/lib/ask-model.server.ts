@@ -6,7 +6,9 @@ import Anthropic from "@anthropic-ai/sdk";
 export const ASK_MODEL = "claude-opus-5-5";
 
 export type AskTurn = { role: "user" | "assistant"; content: string };
-export type AskModelInput = { system: string; context: string; messages: AskTurn[] };
+// image: a photo sent with the newest question (Ask that can see); it goes into the last turn.
+export type AskImage = { data: string; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif" };
+export type AskModelInput = { system: string; context: string; messages: AskTurn[]; image?: AskImage };
 export type AskModel = (input: AskModelInput) => Promise<string>;
 
 export class AskModelError extends Error {
@@ -21,7 +23,7 @@ export class AskModelError extends Error {
 let client: Anthropic | null = null;
 
 export function anthropicAskModel(): AskModel {
-  return async ({ system, context, messages }) => {
+  return async ({ system, context, messages, image }) => {
     client ??= new Anthropic({ timeout: 50_000, maxRetries: 1 });
     try {
       // Streamed on the server (no HTTP timeout on long thinking), collected whole: the
@@ -37,7 +39,11 @@ export function anthropicAskModel(): AskModel {
           { type: "text", text: system, cache_control: { type: "ephemeral" } },
           { type: "text", text: context },
         ],
-        messages,
+        messages: messages.map((m, i) =>
+          image && i === messages.length - 1 && m.role === "user"
+            ? { role: "user" as const, content: [{ type: "image" as const, source: { type: "base64" as const, media_type: image.mediaType, data: image.data } }, { type: "text" as const, text: m.content }] }
+            : m,
+        ),
       });
       const message = await stream.finalMessage();
       if (message.stop_reason === "refusal") throw new AskModelError("refusal", `refused (${message.stop_details?.category ?? "no category"})`);

@@ -12,6 +12,9 @@ import { vetLabel, words, type Pronoun } from "@/lib/cat";
 // The daily cap per member (one cat per member in version 1). One number, used everywhere.
 export const DAILY_QUESTION_CAP = 30;
 export const MAX_QUESTION_CHARS = 1000;
+// Ask that can see (Ky, 15 Nov): up to 10 photo questions a day, inside the 30-question cap.
+export const PHOTO_DAILY_CAP = 10;
+export const PHOTO_DEFAULT_QUESTION = "What do you see? Should I worry?";
 
 // ASPCA Animal Poison Control Center, US, 24/7 (a consultation fee may apply).
 export const POISON_LINE = { name: "ASPCA Animal Poison Control", display: "(888) 426-4435", tel: "tel:+18884264435" };
@@ -231,6 +234,13 @@ export function guardAnswer(answer: string, opts: { redTopic: boolean; cat: CatW
 
 // The model may mark an answer it judges urgent by starting with a line "URGENT". The
 // server strips it and shows the fixed card (flag "general"): a second net, never the first.
+// With a photo, the model starts with a line "PHOTO: <what it shows>" (after any URGENT line).
+// The server strips it and keeps it on her question, so later questions can refer back.
+export function takePhotoNote(answer: string): { note: string | null; text: string } {
+  const m = answer.match(/^\s*\**PHOTO\**:\s*(.+?)\s*(?:\n|$)/i);
+  return m ? { note: m[1].replace(/\*\*/g, "").trim().slice(0, 300), text: answer.slice(m[0].length).trimStart() } : { note: null, text: answer };
+}
+
 export function takeUrgentMarker(answer: string): { urgent: boolean; text: string } {
   const m = answer.match(/^\s*\**URGENT\**:?\s*\n?/);
   return m ? { urgent: true, text: answer.slice(m[0].length).trimStart() } : { urgent: false, text: answer };
@@ -294,20 +304,24 @@ export function askErrorMessage(status: number | null, error: string | undefined
   if (error === "no_cat") return "Set up your cat first, then come back to ask.";
   if (error === "too_long") return `That's a long one. Keep it under ${MAX_QUESTION_CHARS} characters and try again.`;
   if (error === "daily_cap") return `That's today's ${DAILY_QUESTION_CAP} questions about ${catName}. You can ask again tomorrow. If something looks urgent, call your vet or find an emergency vet now.`;
+  if (error === "photo_cap") return `That's today's ${PHOTO_DAILY_CAP} photos. You can still ask in words, and send photos again tomorrow. If something looks urgent, call your vet now.`;
+  if (error === "too_large") return "That photo is too big. Try another, or describe it in words.";
+  if (error === "bad_type") return "That file isn't a photo we can read. Try a JPEG or PNG.";
   if (error === "model_failed") return `I couldn't answer just now. Try again in a moment. If something looks urgent, call your vet or find an emergency vet now.`;
   if (status === 400) return "That didn't look right. Try asking again.";
   return "Something went wrong on our side. Try again in a moment.";
 }
 
 // fresh: an answer that arrived on this screen just now, so it is typed out rather than shown whole.
-export type ChatItem = { id: string; role: "user" | "assistant"; text: string; at: string; flags: FlagId[]; pending?: boolean; fresh?: boolean };
+// photoUrl: the photo she sent with a question (a signed URL, or a local preview just after sending).
+export type ChatItem = { id: string; role: "user" | "assistant"; text: string; at: string; flags: FlagId[]; pending?: boolean; fresh?: boolean; photoUrl?: string };
 
 // Sending a question: her bubble plus the typing dots (a pending answer), together, so the
 // dots show for the whole wait. Ids are q-<at> and pending-<at>; the answer replaces the latter.
-export function withQuestion(items: ChatItem[], question: string, at: string): ChatItem[] {
+export function withQuestion(items: ChatItem[], question: string, at: string, photoUrl?: string): ChatItem[] {
   return [
     ...items,
-    { id: `q-${at}`, role: "user", text: question, at, flags: [] },
+    { id: `q-${at}`, role: "user", text: question, at, flags: [], ...(photoUrl ? { photoUrl } : {}) },
     { id: `pending-${at}`, role: "assistant", text: "", at, flags: [], pending: true },
   ];
 }
