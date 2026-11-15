@@ -12,15 +12,18 @@ export type LabelAnswer = {
   readable: "full" | "partial" | "none";
   flagged: { ingredient: string; id: string; name: string; severity: Severity; summary: string }[];
   unlisted: string[];
+  listedSafe: number;
   worst: Severity | null;
 };
 
-const HERO: Record<Severity | "none", { bg: string; eyebrow: string; title: string; sub: string; text: string }> = {
+// "safe" (green) only when every ingredient is on our list as safe; "unknown" (grey) when nothing
+// worrying was found but some ingredients aren't on our list, because not listed never means safe.
+const HERO: Record<Severity | "unknown", { bg: string; eyebrow: string; title: string; sub: string; text: string }> = {
   emergency: { bg: "bg-red", eyebrow: "text-[#FFE1E6]", title: "text-white", sub: "text-[#FFE1E6]", text: "Contains something dangerous to cats" },
   toxic: { bg: "bg-red", eyebrow: "text-[#FFE1E6]", title: "text-white", sub: "text-[#FFE1E6]", text: "Contains something toxic to cats" },
   mild: { bg: "bg-amber", eyebrow: "text-[#7A5300]", title: "text-amber-ink", sub: "text-[#5C4500]", text: "Contains something to be careful with" },
-  safe: { bg: "bg-[#E6F6EF]", eyebrow: "text-[#14583D]", title: "text-[#0E3B29]", sub: "text-[#14583D]", text: "Nothing on our list to worry about" },
-  none: { bg: "bg-[#E6F6EF]", eyebrow: "text-[#14583D]", title: "text-[#0E3B29]", sub: "text-[#14583D]", text: "Nothing on our list to worry about" },
+  safe: { bg: "bg-[#E6F6EF]", eyebrow: "text-[#14583D]", title: "text-[#0E3B29]", sub: "text-[#14583D]", text: "Every ingredient is on our list as safe for cats" },
+  unknown: { bg: "bg-[#EEF0F4]", eyebrow: "text-slate", title: "text-navy", sub: "text-slate", text: "None of these ingredients are on our list. That doesn't mean they're safe: check with your vet, or ask." },
 };
 
 export default function LabelResult({ answer, onAgain }: { answer: LabelAnswer; onAgain: () => void }) {
@@ -35,7 +38,7 @@ export default function LabelResult({ answer, onAgain }: { answer: LabelAnswer; 
       </div>
     );
   }
-  const hero = HERO[answer.worst ?? "none"];
+  const hero = HERO[answer.worst ?? (answer.unlisted.length === 0 && answer.listedSafe > 0 ? "safe" : "unknown")];
   const danger = answer.worst === "toxic" || answer.worst === "emergency";
   return (
     <div className="flex flex-col gap-3">

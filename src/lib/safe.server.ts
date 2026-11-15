@@ -109,6 +109,7 @@ export type LabelResult = {
   readable: "full" | "partial" | "none";
   flagged: LabelFlag[];
   unlisted: string[];
+  listedSafe: number;
   worst: Severity | null;
 };
 
@@ -133,7 +134,7 @@ export async function labelLookup(supabase: SupabaseClient, identified: Identifi
   const product = identified.product || identified.name || "This label";
   if (cat) await logLookup(supabase, cat.id, `label: ${product}`, flagged[0]?.id ?? null, "photo");
   const readable = ingredients.length === 0 ? "none" : identified.readable;
-  return { kind: "label", product, readable, flagged, unlisted: match.unlisted, worst: match.worst };
+  return { kind: "label", product, readable, flagged, unlisted: match.unlisted, listedSafe: match.listedSafe, worst: match.worst };
 }
 
 // Photo -> the model names it -> we match the name against our list. A match only counts when the

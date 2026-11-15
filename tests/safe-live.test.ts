@@ -56,6 +56,7 @@ describe.skipIf(!LIVE)("photo identification, live model", () => {
     ["label-flea.jpg", "emergency", ["Dog flea treatment (permethrin)"]],
     ["label-treats.jpg", "toxic", ["Garlic"]],
     ["label-tuna.jpg", null, []],
+    ["label-salt.jpg", "toxic", ["Salt"]],
   ])("reads the ingredient label in %s and answers from our list", async (file, worst, mustFlag) => {
     const email = `safe-live-${randomUUID().slice(0, 8)}@test.invalid`;
     const password = randomUUID();

@@ -21,7 +21,8 @@ describe("Label Scan matching", () => {
     const r = scan(["Chicken", "Chicken Liver", "Ground Rice", "Glycerin", "Salt", "Natural Flavor", "Brewers Dried Yeast", "Garlic Powder", "Mixed Tocopherols", "Taurine"]);
     expect(r.flagged.map((f) => f.name)).toEqual(["Garlic"]);
     expect(r.worst).toBe("toxic");
-    expect(r.unlisted).toEqual(expect.arrayContaining(["Salt", "Brewers Dried Yeast", "Chicken Liver", "Chicken"]));
+    expect(r.unlisted).toEqual(expect.arrayContaining(["Salt", "Brewers Dried Yeast", "Chicken Liver"]));
+    expect(r.listedSafe).toBeGreaterThanOrEqual(1); // chicken is on our list as safe
   });
 
   it("a plain food label flags nothing", () => {
@@ -57,5 +58,30 @@ describe("Label Scan matching", () => {
   it("an ignored word never flags, even though our list uses it elsewhere", () => {
     for (const w of ["salt", "yeast", "zinc", "iron", "liver"]) expect(LABEL_IGNORE.has(w)).toBe(true);
     expect(scan(["Salt", "Yeast", "Zinc", "Iron"]).flagged).toEqual([]);
+  });
+
+  it("a product that is only salt is judged as salt: a warning, not a pass (Ky's sea salt test, 15 Nov)", () => {
+    for (const label of [["Natural Sea Salt"], ["Sea salt"], ["Salt"], ["Himalayan pink salt", "Iodine"]]) {
+      const r = scan(label);
+      expect(r.flagged.map((f) => f.name), label.join(", ")).toContain("Salt");
+      expect(r.worst).toBe("toxic");
+    }
+  });
+
+  it("salt inside a longer ingredient list is still an ordinary label word", () => {
+    const r = scan(["Chicken", "Natural Sea Salt", "Rice", "Taurine"]);
+    expect(r.flagged).toEqual([]);
+    expect(r.unlisted).toContain("Natural Sea Salt");
+  });
+
+  it("a one-ingredient product of something dangerous is flagged as that thing", () => {
+    expect(scan(["Pure Tea Tree Oil"]).flagged.map((f) => f.name)).toContain("Tea tree oil");
+    expect(scan(["Yeast"]).flagged.map((f) => f.name)).toContain("Raw bread dough");
+  });
+
+  it("counts ingredients that are on our list as safe, so the screen can tell 'all safe' from 'not on our list'", () => {
+    expect(scan(["Chicken", "Rice", "Pumpkin"])).toMatchObject({ flagged: [], unlisted: [], worst: null });
+    expect(scan(["Chicken", "Rice", "Pumpkin"]).listedSafe).toBe(3);
+    expect(scan(["Water", "Guar Gum", "Taurine"]).listedSafe).toBe(0);
   });
 });

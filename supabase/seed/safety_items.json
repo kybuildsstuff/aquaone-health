@@ -924,7 +924,6 @@
    "crisps",
    "pretzels",
    "salted nuts",
-   "salt",
    "popcorn"
   ],
   "scientific_name": null,
@@ -18203,6 +18202,30 @@
   "summary": "Common cat dewormers. Safe at the dose for her weight in a product made for cats; an overdose can cause vomiting.",
   "what_to_do": "Use only a product labelled for cats, at the dose for {poss} weight.\nIf {name} got a dog product, or more than one dose, call your vet now.",
   "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Salt",
+  "aliases": [
+   "table salt",
+   "sea salt",
+   "natural sea salt",
+   "kosher salt",
+   "himalayan salt",
+   "pink salt",
+   "salt lamp",
+   "himalayan salt lamp",
+   "sodium chloride",
+   "salt shaker",
+   "bath salts",
+   "epsom salt"
+  ],
+  "scientific_name": null,
+  "category": "food",
+  "severity": "toxic",
+  "summary": "A little salt in cat food is normal. Eating salt itself, from a shaker, a bag, a salt lamp or bath salts, can cause salt poisoning in cats: vomiting, wobbliness, tremors and seizures.",
+  "what_to_do": "Call your vet or a pet poison line now if {name} ate or licked salt itself, even if {name} seems fine.\nWipe any salt off {poss} fur or paws with a damp cloth, so {name} can't lick more.\nBring the packet or a photo if you go in.",
+  "toxic_principle": "Sodium chloride",
   "source": "AquaOne Health list, from published veterinary poison-control guidance"
  }
 ]
