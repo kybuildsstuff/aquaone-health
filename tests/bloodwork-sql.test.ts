@@ -16,7 +16,8 @@ class Rollback extends Error {}
 async function rolledBack(fn: (tx: postgres.TransactionSql) => Promise<void>) {
   try {
     await sql.begin(async (tx) => {
-      for (const m of MIGRATIONS) await tx.unsafe(m);
+      // Before the go the tables don't exist yet: apply the migrations inside this transaction.
+      if (!(await tx`select to_regclass('public.lab_panels') t`)[0].t) for (const m of MIGRATIONS) await tx.unsafe(m);
       await fn(tx);
       throw new Rollback();
     });
