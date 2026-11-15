@@ -42,12 +42,6 @@ export function ReportSummaryCard({ r, pdfHref }: { r: Report; pdfHref: string }
 export function ReportDetails({ r }: { r: Report }) {
   return (
     <>
-      {r.bloodwork ? (
-        <section className="flex flex-col gap-2.5" aria-label="Bloodwork">
-          <h2 className="px-1 text-[15px] leading-4.5 font-bold">Bloodwork · latest results</h2>
-          <PanelView p={r.bloodwork} catName={r.cat.name} />
-        </section>
-      ) : null}
       <Section title="Drinking" note={`${r.drinking.checkIns} of ${r.period.days} days`}>
         <div className="flex items-center justify-between" aria-label={`${r.drinking.checkIns} check-ins in ${r.period.days} days`}>
           {r.drinking.days.map((d) => (
@@ -164,6 +158,13 @@ export function ReportDetails({ r }: { r: Report }) {
             ))}
         </dl>
       </Section>
+
+      {r.bloodwork ? (
+        <section className="flex flex-col gap-2.5" aria-label="Bloodwork">
+          <h2 className="px-1 text-[15px] leading-4.5 font-bold">Bloodwork · latest results</h2>
+          <PanelView p={r.bloodwork} catName={r.cat.name} />
+        </section>
+      ) : null}
 
       <p className="px-2.5 py-0.5 text-center text-xs leading-4.25 font-semibold text-slate">{DISCLAIMER}</p>
     </>

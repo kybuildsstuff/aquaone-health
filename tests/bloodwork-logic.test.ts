@@ -20,6 +20,8 @@ describe("matching printed names to our tests", () => {
   it("every explanation we wrote stays inside the claims rules", () => {
     const banned = /\b(disease|failure|diagnos|stage|iris|cancer|diabet|hyperthyroid|kidney failure|ckd|treat|cure|medicat|prescri|normal for)\b/i;
     for (const t of TESTS) expect(t.about, t.code).not.toMatch(banned);
+    // Pronoun-free: the cat may be a he, a she or a they.
+    for (const t of TESTS) expect(t.about, t.code).not.toMatch(/\b(she|her|he|his|him)\b/i);
     expect(TESTS.length).toBeGreaterThanOrEqual(25);
   });
 });

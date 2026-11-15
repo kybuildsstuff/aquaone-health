@@ -172,7 +172,7 @@ export default function OnboardingFlow({ addMode = false }: { addMode?: boolean 
       <div className="flex flex-1 flex-col gap-8 px-7 pt-10">
         {step === "name" && (
           <>
-            <Question title="What's your cat's name?" sub="We'll use it everywhere, so the app feels like it's about them." />
+            <Question title={addMode ? "What's this cat's name?" : "What's your cat's name?"} sub="We'll use it everywhere, so the app feels like it's about them." />
             <div className="flex flex-col gap-4">
               <label className="flex h-16 items-center justify-between rounded-[18px] border-2 border-blue bg-white px-5 shadow-[0_0_0_5px_rgba(83,105,238,0.10)]">
                 <input
@@ -194,7 +194,7 @@ export default function OnboardingFlow({ addMode = false }: { addMode?: boolean 
                 value={form.pronoun}
                 onChange={(v) => set("pronoun", v)}
               />
-              <p className="text-[13px] text-[#8A93A8]">Photo uploads arrive in an update. Got more than one cat? Add the others later.</p>
+              <p className="text-[13px] text-[#8A93A8]">{addMode ? "Photo uploads arrive in an update." : "Photo uploads arrive in an update. Got more than one cat? Add up to four from Account once you're in."}</p>
             </div>
           </>
         )}
