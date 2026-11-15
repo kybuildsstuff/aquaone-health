@@ -40,9 +40,37 @@ describe.skipIf(!LIVE)("photo identification, live model", () => {
     const mediaType = path.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
     const r = await photoLookup(client, { data: readFileSync(path).toString("base64"), mediaType }, anthropicIdentifier());
     if (!r.ok) throw new Error(r.error);
-    console.log("model said:", JSON.stringify(r.data.identified));
-    expect(r.data.identified.found).toBe(true);
-    const item = r.data.itemId ? await getItem(client, r.data.itemId) : null;
-    expect(item?.name).toBe(expected);
+    console.log("model said:", JSON.stringify(r.data));
+    // A front-of-bottle photo is a single item; if the model reads it as a label, the flagged
+    // ingredients must still name the same item from our list.
+    if (r.data.kind === "item") {
+      expect(r.data.identified.found).toBe(true);
+      const item = r.data.itemId ? await getItem(client, r.data.itemId) : null;
+      expect(item?.name).toBe(expected);
+    } else {
+      expect(r.data.flagged.map((f) => f.name)).toContain(expected);
+    }
+  }, 90_000);
+
+  it.each([
+    ["label-flea.jpg", "emergency", ["Dog flea treatment (permethrin)"]],
+    ["label-treats.jpg", "toxic", ["Garlic"]],
+    ["label-tuna.jpg", null, []],
+  ])("reads the ingredient label in %s and answers from our list", async (file, worst, mustFlag) => {
+    const email = `safe-live-${randomUUID().slice(0, 8)}@test.invalid`;
+    const password = randomUUID();
+    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+    if (error) throw error;
+    created.push(data.user.id);
+    const client = createClient(url, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false } });
+    await client.auth.signInWithPassword({ email, password });
+    const r = await photoLookup(client, { data: readFileSync(`tests/fixtures/safe/${file}`).toString("base64"), mediaType: "image/jpeg" }, anthropicIdentifier());
+    if (!r.ok) throw new Error(r.error);
+    console.log(`label ${file}:`, JSON.stringify(r.data));
+    expect(r.data.kind).toBe("label");
+    if (r.data.kind !== "label") return;
+    expect(r.data.readable).not.toBe("none");
+    expect(r.data.worst).toBe(worst);
+    expect(r.data.flagged.map((f) => f.name)).toEqual(expect.arrayContaining(mustFlag as string[]));
   }, 90_000);
 });

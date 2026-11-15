@@ -14,6 +14,11 @@ export const identificationSchema = z.object({
   name: z.string(),
   confidence: z.enum(["high", "medium", "low"]),
   alternatives: z.array(z.string()),
+  // Label Scan (Ky, 15 Nov): when the photo is an ingredient list, the model reads it; our code decides.
+  kind: z.enum(["item", "label"]),
+  product: z.string(),
+  ingredients: z.array(z.string()),
+  readable: z.enum(["full", "partial", "none"]),
 });
 export type Identification = z.infer<typeof identificationSchema>;
 export type Identifier = (image: { data: string; mediaType: PhotoType }) => Promise<Identification>;
@@ -34,7 +39,12 @@ Return:
 - name: the most common everyday name (for a plant, its common name such as "Peace Lily" or "Spider Plant"; for a medicine or product, the generic active ingredient or type only, such as "minoxidil", "ibuprofen" or "bleach", read from the label if you can, without brand, strength or form like "5%" or "topical solution"; put the brand name in alternatives).
 - confidence: how sure you are of that name.
 - alternatives: up to 3 other names it could be (other common names, or look-alikes), most likely first.
-Do not say whether it is safe or toxic. Do not add advice. If unsure, say so with a low confidence rather than guessing.`;
+- kind: "label" when the photo mainly shows a product's ingredient list or active-ingredients panel (food, treats, cleaners, flea products, cosmetics, medicines); otherwise "item".
+- product: for a label, the product's name and type if visible (e.g. "Tuna cat treats", "Dog flea shampoo"), else "".
+- ingredients: for a label, every ingredient exactly in the order printed, one per entry, as written (include active and inactive ingredients; drop percentages); for an item, [].
+- readable: for a label, "full" if you could read the whole list, "partial" if some is cut off, blurry or covered, "none" if you couldn't read it; for an item, "full".
+For a label, also set name to the product type and found to true.
+Do not say whether it is safe or toxic. Do not add advice. If unsure, say so with a low confidence rather than guessing. Never invent an ingredient you cannot read.`;
 
 let client: Anthropic | null = null;
 

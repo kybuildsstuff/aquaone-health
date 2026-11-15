@@ -38,7 +38,8 @@ async function makeUser(label: string, withCat: boolean): Promise<U> {
   return { id: data.user.id, client, catId };
 }
 
-const stub = (result: Identification): Identifier & { calls: number } => {
+const stub = (partial: Partial<Identification> & Pick<Identification, "found" | "name" | "confidence" | "alternatives">): Identifier & { calls: number } => {
+  const result: Identification = { kind: "item", product: "", ingredients: [], readable: "full", ...partial };
   const fn = Object.assign(
     async () => {
       fn.calls++;
@@ -168,7 +169,7 @@ describe("photo (model stubbed: it only names the item)", () => {
     const identify = stub({ found: true, name: "Easter lily", confidence: "high", alternatives: ["Lilium longiflorum"] });
     const r = await photoLookup(a.client, IMAGE, identify);
     expect(identify.calls).toBe(1);
-    if (!r.ok) throw new Error(r.error);
+    if (!r.ok || r.data.kind !== "item") throw new Error("not an item result");
     const item = await getItem(a.client, r.data.itemId!);
     expect(item?.name).toBe("Easter Lily");
     expect(item?.severity).toBe("emergency");
@@ -179,26 +180,26 @@ describe("photo (model stubbed: it only names the item)", () => {
   it("the verdict always comes from our list, whatever the model says", async () => {
     // The stub can only return a name; a safe plant's name gives the list's safe answer.
     const r = await photoLookup(a.client, IMAGE, stub({ found: true, name: "Spider plant", confidence: "high", alternatives: [] }));
-    if (!r.ok) throw new Error(r.error);
+    if (!r.ok || r.data.kind !== "item") throw new Error("not an item result");
     expect((await getItem(a.client, r.data.itemId!))?.severity).toBe("safe");
   });
 
   it("a low-confidence guess is not treated as a match: unknown answer, with the near matches", async () => {
     const r = await photoLookup(a.client, IMAGE, stub({ found: true, name: "Peace lily", confidence: "low", alternatives: ["Calla lily"] }));
-    if (!r.ok) throw new Error(r.error);
+    if (!r.ok || r.data.kind !== "item") throw new Error("not an item result");
     expect(r.data.itemId).toBeNull();
     expect(r.data.candidates.map((c) => c.name)).toEqual(expect.arrayContaining(["Peace Lily"]));
   });
 
   it("a name not on our list gives the unknown answer", async () => {
     const r = await photoLookup(a.client, IMAGE, stub({ found: true, name: "Zamioculcas zamiifolia", confidence: "high", alternatives: [] }));
-    if (!r.ok) throw new Error(r.error);
+    if (!r.ok || r.data.kind !== "item") throw new Error("not an item result");
     expect(r.data.itemId).toBeNull();
   });
 
   it("nothing recognisable in the photo gives the unknown answer, logged", async () => {
     const r = await photoLookup(a.client, IMAGE, stub({ found: false, name: "", confidence: "low", alternatives: [] }));
-    if (!r.ok) throw new Error(r.error);
+    if (!r.ok || r.data.kind !== "item") throw new Error("not an item result");
     expect([r.data.itemId, r.data.candidates.length]).toEqual([null, 0]);
     const { data } = await a.client.from("safety_lookups").select("matched_item_id").eq("cat_id", a.catId!).eq("query", r.data.query);
     expect(data).toEqual([{ matched_item_id: null }]);
@@ -230,5 +231,31 @@ describe("row-level security on lookups", () => {
   it("fills her cat's words into the list's text", () => {
     expect(fillCatWords("Wipe {poss} fur so {name} can't lick it; keep {obj} warm.", { name: "Milo", pronoun: "he" })).toBe("Wipe his fur so Milo can't lick it; keep him warm.");
     expect(fillCatWords("{name} and {obj}", null)).toBe("your cat and them");
+  });
+});
+
+describe("Label Scan (model stubbed: it only reads the ingredients)", () => {
+  it("a label photo answers ingredient by ingredient from our list, worst first, logged as a photo lookup", async () => {
+    const r = await photoLookup(
+      a.client,
+      IMAGE,
+      stub({ found: true, name: "Dog flea shampoo", confidence: "high", alternatives: [], kind: "label", product: "Dog flea shampoo", ingredients: ["Permethrin 0.07%", "Water", "Sodium Lauryl Sulfate"], readable: "full" }),
+    );
+    if (!r.ok || r.data.kind !== "label") throw new Error("not a label result");
+    expect(r.data.worst).toBe("emergency");
+    expect(r.data.flagged.map((f) => [f.ingredient, f.severity])).toEqual([
+      ["Permethrin 0.07%", "emergency"],
+      ["Sodium Lauryl Sulfate", "mild"],
+    ]);
+    expect(r.data.unlisted).toEqual(["Water"]);
+    expect(r.data.flagged[0].summary).not.toMatch(/\{name\}/);
+    const { data } = await a.client.from("safety_lookups").select("query, matched_item_id, method").eq("cat_id", a.catId!).eq("query", "label: Dog flea shampoo");
+    expect(data).toEqual([{ query: "label: Dog flea shampoo", matched_item_id: r.data.flagged[0].id, method: "photo" }]);
+  });
+
+  it("a label the model couldn't read says so, with nothing flagged", async () => {
+    const r = await photoLookup(a.client, IMAGE, stub({ found: true, name: "Cat food", confidence: "low", alternatives: [], kind: "label", product: "", ingredients: [], readable: "none" }));
+    if (!r.ok || r.data.kind !== "label") throw new Error("not a label result");
+    expect([r.data.readable, r.data.flagged.length, r.data.worst]).toEqual(["none", 0, null]);
   });
 });

@@ -3,12 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CATEGORY_LABEL, PHOTO_MAX_BYTES, pickMatch, type SafetyMatch } from "@/lib/safe";
 import { SeverityBadge } from "./parts";
+import LabelResult, { type LabelAnswer } from "./LabelResult";
 import { shrinkPhoto } from "@/lib/photo-client";
 
 // The search box and camera button. While she types, matches from our list replace the tiles
 // (children); picking one, or the "not on our list" answer, logs the lookup and opens it.
 
-type PhotoResponse = { ok: true; itemId: string | null; query: string; candidates: { id: string }[] } | { error: string };
+type PhotoResponse = ({ ok: true; kind: "item"; itemId: string | null; query: string; candidates: { id: string }[] } | ({ ok: true } & LabelAnswer)) | { error: string };
 
 const PHOTO_ERRORS: Record<string, string> = {
   too_large: "That photo is too big. Try again, or type the name.",
@@ -26,6 +27,8 @@ export default function SafeSearch({ children }: { children: React.ReactNode }) 
   const [photoBusy, setPhotoBusy] = useState(false);
   const [opening, setOpening] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  // Label Scan: the answer for a label photo shows here, in place of the tiles.
+  const [label, setLabel] = useState<LabelAnswer | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const seq = useRef(0);
 
@@ -88,6 +91,7 @@ export default function SafeSearch({ children }: { children: React.ReactNode }) 
   async function onPhoto(file: File | undefined) {
     if (!file) return;
     setPhotoError(null);
+    setLabel(null);
     setPhotoBusy(true);
     try {
       const photo = await shrinkPhoto(file, "safe_photo");
@@ -97,6 +101,11 @@ export default function SafeSearch({ children }: { children: React.ReactNode }) 
       const res = await fetch("/api/safe/photo", { method: "POST", body: form });
       const body = (await res.json().catch(() => ({ error: "server_error" }))) as PhotoResponse;
       if (!res.ok || "error" in body) throw new PhotoError("error" in body ? body.error : `http_${res.status}`);
+      if (body.kind === "label") {
+        setLabel(body);
+        setPhotoBusy(false);
+        return;
+      }
       if (body.itemId) router.push(`/safe/item/${body.itemId}?via=photo`);
       else router.push(`/safe/unknown?via=photo&q=${encodeURIComponent(body.query)}&c=${body.candidates.map((c) => c.id).join(",")}`);
     } catch (e) {
@@ -150,10 +159,13 @@ export default function SafeSearch({ children }: { children: React.ReactNode }) 
         <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
       </form>
 
+      {!typing && !label && !photoBusy && !photoError && (
+        <p className="-mt-1 px-1 text-[13px] leading-4.5 text-slate">Tap the camera for a plant, a pill bottle, or a whole ingredient label.</p>
+      )}
       {photoBusy && (
         <div className="flex items-center gap-3 rounded-[18px] bg-navy px-4 py-3.5 text-[15px] leading-5 text-white" role="status">
           <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-          Looking at your photo…
+          Looking at your photo… (labels take a few seconds longer)
         </div>
       )}
       {photoError && (
@@ -162,7 +174,9 @@ export default function SafeSearch({ children }: { children: React.ReactNode }) 
         </p>
       )}
 
-      {typing ? (
+      {label && !photoBusy ? (
+        <LabelResult answer={label} onAgain={() => { setLabel(null); fileRef.current?.click(); }} />
+      ) : typing ? (
         <div className={`flex flex-col rounded-[22px] bg-white px-4.5 py-1 transition-opacity ${opening ? "pointer-events-none opacity-50" : ""}`} aria-busy={opening}>
           {searchError ? (
             <p className="py-3.5 text-[15px] leading-5 text-slate">We couldn&apos;t search just now. Check your connection and try again.</p>

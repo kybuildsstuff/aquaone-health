@@ -353,7 +353,7 @@ function AssistantBlock({ item, cat }: { item: ChatItem; cat: Cat }) {
     return (
       <div className="flex max-w-[330px] flex-col gap-2.5">
         <UrgentCard flag={flag} cat={cat} />
-        {item.pending ? <Typing /> : item.text ? <p className="rounded-[18px] bg-white px-4 py-3 text-[15px] leading-5.5 whitespace-pre-wrap">{item.text}</p> : null}
+        {item.pending ? <Typing /> : item.text ? <p className="rounded-[18px] bg-white px-4 py-3 text-[15px] leading-5.5 whitespace-pre-wrap"><Rich text={item.text} /></p> : null}
       </div>
     );
   }

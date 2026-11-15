@@ -4,6 +4,8 @@ import type { ActionResult } from "@/lib/app-data.server";
 import type { Pronoun } from "@/lib/cat";
 import { CONFIDENT_SCORE, pickMatch, type PhotoType, type SafetyCategory, type SafetyItem, type SafetyMatch, type Severity } from "@/lib/safe";
 import type { Identification, Identifier } from "@/lib/safe-vision.server";
+import { buildLabelIndex, matchLabel, splitIngredients, type LabelFlag, type LabelIndexItem } from "@/lib/safe-label";
+import { fillCatWords } from "@/lib/safe";
 
 // Everything here runs with HER client, so row-level security applies: the list is readable by
 // any signed-in user, and lookups are written and read only for her own cat.
@@ -93,11 +95,46 @@ export async function recordSearchLookup(supabase: SupabaseClient, q: string, it
 }
 
 export type PhotoResult = {
+  kind: "item";
   identified: Identification;
   itemId: string | null;
   query: string;
   candidates: { id: string; name: string; severity: Severity }[];
 };
+
+// Label Scan: what the label says, ingredient by ingredient, against our list.
+export type LabelResult = {
+  kind: "label";
+  product: string;
+  readable: "full" | "partial" | "none";
+  flagged: LabelFlag[];
+  unlisted: string[];
+  worst: Severity | null;
+};
+
+// The whole list (about 1,200 rows) for label matching, read with her client (the list is
+// readable by any signed-in user).
+// The API returns at most 1,000 rows per request, so the list is read in pages.
+async function labelIndexItems(supabase: SupabaseClient): Promise<LabelIndexItem[]> {
+  const out: LabelIndexItem[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from("safety_items").select("id, name, aliases, scientific_name, severity, category, summary").order("name").range(from, from + 999);
+    if (error) throw new Error(`safety_items read failed: ${error.message}`);
+    out.push(...((data ?? []) as LabelIndexItem[]));
+    if (!data || data.length < 1000) return out;
+  }
+}
+
+export async function labelLookup(supabase: SupabaseClient, identified: Identification): Promise<LabelResult> {
+  const ingredients = splitIngredients(identified.ingredients);
+  const match = matchLabel(ingredients, buildLabelIndex(await labelIndexItems(supabase)));
+  const cat = await getSafeCat(supabase);
+  const flagged = match.flagged.map((f) => ({ ...f, summary: fillCatWords(f.summary, cat) }));
+  const product = identified.product || identified.name || "This label";
+  if (cat) await logLookup(supabase, cat.id, `label: ${product}`, flagged[0]?.id ?? null, "photo");
+  const readable = ingredients.length === 0 ? "none" : identified.readable;
+  return { kind: "label", product, readable, flagged, unlisted: match.unlisted, worst: match.worst };
+}
 
 // Photo -> the model names it -> we match the name against our list. A match only counts when the
 // model wasn't guessing (confidence not low) and the name matches one answer closely; otherwise she
@@ -106,8 +143,9 @@ export async function photoLookup(
   supabase: SupabaseClient,
   image: { data: string; mediaType: PhotoType },
   identify: Identifier,
-): Promise<ActionResult<PhotoResult>> {
+): Promise<ActionResult<PhotoResult | LabelResult>> {
   const identified = await identify(image);
+  if (identified.kind === "label") return { ok: true, data: await labelLookup(supabase, identified) };
   const names = identified.found ? [identified.name, ...identified.alternatives].filter(Boolean) : [];
 
   let itemId: string | null = null;
@@ -123,5 +161,5 @@ export async function photoLookup(
   const query = identified.found ? identified.name : "(photo: nothing recognised)";
   const cat = await getSafeCat(supabase);
   if (cat) await logLookup(supabase, cat.id, query, itemId, "photo");
-  return { ok: true, data: { identified, itemId, query, candidates: [...candidates.values()] } };
+  return { ok: true, data: { kind: "item", identified, itemId, query, candidates: [...candidates.values()] } };
 }

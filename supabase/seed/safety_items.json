@@ -249,7 +249,8 @@
    "cocoa",
    "hot chocolate",
    "chocolate bar",
-   "candy bar"
+   "candy bar",
+   "theobromine"
   ],
   "scientific_name": null,
   "category": "food",
@@ -1178,7 +1179,8 @@
    "brake fluid",
    "snow globe",
    "snow globe liquid",
-   "windshield de-icer"
+   "windshield de-icer",
+   "diethylene glycol"
   ],
   "scientific_name": null,
   "category": "household",
@@ -1494,7 +1496,14 @@
    "pennyroyal",
    "sweet birch oil",
    "lavender oil",
-   "rosemary oil"
+   "rosemary oil",
+   "citronella oil",
+   "lemongrass oil",
+   "cinnamon leaf oil",
+   "peppermint extract oil",
+   "thyme oil",
+   "oregano oil",
+   "bergamot oil"
   ],
   "scientific_name": null,
   "category": "household",
@@ -1660,7 +1669,14 @@
    "insecticide",
    "pyrethrin",
    "pyrethroid",
-   "wasp spray"
+   "wasp spray",
+   "cypermethrin",
+   "bifenthrin",
+   "deltamethrin",
+   "lambda-cyhalothrin",
+   "etofenprox",
+   "tetramethrin",
+   "phenothrin"
   ],
   "scientific_name": null,
   "category": "household",
@@ -1953,7 +1969,11 @@
    "bromethalin",
    "brodifacoum",
    "warfarin bait",
-   "cholecalciferol bait"
+   "cholecalciferol bait",
+   "bromadiolone",
+   "difethialone",
+   "diphacinone",
+   "chlorophacinone"
   ],
   "scientific_name": null,
   "category": "household",
@@ -17920,5 +17940,269 @@
   "severity": "safe",
   "summary": "Not toxic to cats. It's fine to keep in a home with a cat.",
   "what_to_do": "Chewing a lot of any plant can cause a little vomiting that passes on its own.\nIf {name} keeps vomiting or stops eating, call your vet."
+ },
+ {
+  "name": "Propylene glycol",
+  "aliases": [
+   "propylene glycol",
+   "propane-1,2-diol",
+   "1,2-propanediol",
+   "PG"
+  ],
+  "scientific_name": null,
+  "category": "household",
+  "severity": "mild",
+  "summary": "Not allowed in cat food, because it can harm cats' red blood cells. A small taste is unlikely to cause trouble, but she shouldn't eat products that contain it.",
+  "what_to_do": "Keep it away from {name}.\nIf {name} ate a lot of it, or seems unwell afterwards, call your vet.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Limonene (citrus extract)",
+  "aliases": [
+   "limonene",
+   "d-limonene",
+   "citrus extract",
+   "orange terpenes",
+   "citrus terpenes",
+   "linalool"
+  ],
+  "scientific_name": null,
+  "category": "household",
+  "severity": "toxic",
+  "summary": "A citrus oil used in cleaners, sprays and some flea products. Cats can't break it down well, so licking it or getting it on the skin can cause drooling, wobbliness and skin irritation.",
+  "what_to_do": "Call your vet or a pet poison line now, even if {name} seems fine.\nWipe any residue off {poss} fur or paws with a damp cloth, so {name} can't lick more.\nBring the label or a photo if you go in.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "5-Fluorouracil skin cream",
+  "aliases": [
+   "fluorouracil",
+   "5-fluorouracil",
+   "5-fu",
+   "efudex",
+   "carac"
+  ],
+  "scientific_name": null,
+  "category": "medicine",
+  "severity": "emergency",
+  "summary": "A prescription skin cream for people. Licking even a small amount off skin, a tube or a bandage can cause severe vomiting, seizures and death in pets.",
+  "what_to_do": "Go to a vet or emergency vet now, even if {name} seems fine.\nCall a pet poison line on the way if you can.\nBring the packet, label or a photo with you.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Organophosphate insecticides",
+  "aliases": [
+   "organophosphate",
+   "chlorpyrifos",
+   "diazinon",
+   "malathion",
+   "dichlorvos",
+   "tetrachlorvinphos",
+   "phosmet"
+  ],
+  "scientific_name": null,
+  "category": "household",
+  "severity": "emergency",
+  "summary": "Strong insect killers found in some garden products and older flea products. They overload the nervous system: drooling, tremors, a racing heart and trouble breathing.",
+  "what_to_do": "Go to a vet or emergency vet now, even if {name} seems fine.\nCall a pet poison line on the way if you can.\nBring the packet, label or a photo with you.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Carbamate insecticides",
+  "aliases": [
+   "carbamate",
+   "carbaryl",
+   "propoxur",
+   "methomyl",
+   "bendiocarb"
+  ],
+  "scientific_name": null,
+  "category": "household",
+  "severity": "emergency",
+  "summary": "Insect killers found in some garden dusts, baits and older flea products. Like organophosphates, they overload the nervous system and can cause tremors and trouble breathing.",
+  "what_to_do": "Go to a vet or emergency vet now, even if {name} seems fine.\nCall a pet poison line on the way if you can.\nBring the packet, label or a photo with you.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Boric acid and borax",
+  "aliases": [
+   "boric acid",
+   "borax",
+   "sodium borate",
+   "sodium tetraborate",
+   "disodium tetraborate"
+  ],
+  "scientific_name": null,
+  "category": "household",
+  "severity": "toxic",
+  "summary": "Used in ant and roach baits, some cleaners and laundry boosters. Eating it can cause vomiting, drooling and diarrhea, and larger amounts can hurt the kidneys.",
+  "what_to_do": "Call your vet or a pet poison line now, even if {name} seems fine.\nWipe any residue off {poss} fur or paws with a damp cloth, so {name} can't lick more.\nBring the label or a photo if you go in.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Camphor and menthol rubs",
+  "aliases": [
+   "camphor",
+   "menthol",
+   "vapor rub",
+   "vapour rub",
+   "chest rub",
+   "muscle rub",
+   "eucalyptol"
+  ],
+  "scientific_name": null,
+  "category": "medicine",
+  "severity": "toxic",
+  "summary": "Found in chest rubs, muscle balms and some lip products. Cats absorb camphor quickly through the mouth and skin, and it can cause vomiting and seizures.",
+  "what_to_do": "Call your vet or a pet poison line now, even if {name} seems fine.\nWipe any residue off {poss} fur or paws with a damp cloth, so {name} can't lick more.\nBring the label or a photo if you go in.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Salicylic acid",
+  "aliases": [
+   "salicylic acid",
+   "salicylate",
+   "sodium salicylate",
+   "acne pads",
+   "wart remover"
+  ],
+  "scientific_name": null,
+  "category": "medicine",
+  "severity": "toxic",
+  "summary": "An acne and wart treatment closely related to aspirin. Cats clear these compounds very slowly, so licking it from skin, a pad or a tube can poison them.",
+  "what_to_do": "Call your vet or a pet poison line now, even if {name} seems fine.\nWipe any residue off {poss} fur or paws with a damp cloth, so {name} can't lick more.\nBring the label or a photo if you go in.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Zinc pyrithione",
+  "aliases": [
+   "zinc pyrithione",
+   "pyrithione zinc"
+  ],
+  "scientific_name": null,
+  "category": "household",
+  "severity": "mild",
+  "summary": "A dandruff shampoo ingredient. A small lick may upset her stomach. People's shampoo isn't made for cats, so don't use it on her.",
+  "what_to_do": "Keep it away from {name}.\nIf {name} ate a lot of it, or seems unwell afterwards, call your vet.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Sodium lauryl sulfate",
+  "aliases": [
+   "sodium lauryl sulfate",
+   "sodium laureth sulfate",
+   "sodium lauryl sulphate",
+   "sodium laureth sulphate",
+   "SLS",
+   "SLES",
+   "ammonium lauryl sulfate"
+  ],
+  "scientific_name": null,
+  "category": "household",
+  "severity": "mild",
+  "summary": "The foaming agent in many soaps and shampoos. Swallowed, it can cause drooling, vomiting or an upset stomach.",
+  "what_to_do": "Keep it away from {name}.\nIf {name} ate a lot of it, or seems unwell afterwards, call your vet.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Phenoxyethanol",
+  "aliases": [
+   "phenoxyethanol",
+   "2-phenoxyethanol"
+  ],
+  "scientific_name": null,
+  "category": "household",
+  "severity": "mild",
+  "summary": "A preservative in cosmetics, wipes and some pet products. A lick is unlikely to harm her, but larger amounts can cause vomiting and drowsiness.",
+  "what_to_do": "Keep it away from {name}.\nIf {name} ate a lot of it, or seems unwell afterwards, call your vet.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Glycol ether solvents",
+  "aliases": [
+   "2-butoxyethanol",
+   "butoxyethanol",
+   "ethylene glycol monobutyl ether",
+   "glycol ether",
+   "ethylene glycol butyl ether"
+  ],
+  "scientific_name": null,
+  "category": "household",
+  "severity": "toxic",
+  "summary": "Solvents in glass and surface cleaners. Swallowed, they can cause vomiting, weakness and harm to red blood cells.",
+  "what_to_do": "Call your vet or a pet poison line now, even if {name} seems fine.\nWipe any residue off {poss} fur or paws with a damp cloth, so {name} can't lick more.\nBring the label or a photo if you go in.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Fipronil (cat flea treatment)",
+  "aliases": [
+   "fipronil",
+   "s-methoprene",
+   "methoprene"
+  ],
+  "scientific_name": null,
+  "category": "medicine",
+  "severity": "mild",
+  "summary": "Used in flea and tick treatments made for cats. Safe only in a product labelled for cats, at the dose for her weight. Licking a freshly applied dose can cause drooling.",
+  "what_to_do": "Use only a product labelled for cats, at the dose for {poss} weight.\nIf {name} got a dog product, or more than one dose, call your vet now.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Imidacloprid (cat flea treatment)",
+  "aliases": [
+   "imidacloprid",
+   "flumethrin"
+  ],
+  "scientific_name": null,
+  "category": "medicine",
+  "severity": "mild",
+  "summary": "Used in flea treatments and collars made for cats. Safe only in a product labelled for cats; licking a freshly applied dose can cause drooling. Dog versions may also contain permethrin, which is deadly to cats.",
+  "what_to_do": "Use only a product labelled for cats, at the dose for {poss} weight.\nIf {name} got a dog product, or more than one dose, call your vet now.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Selamectin (cat parasite treatment)",
+  "aliases": [
+   "selamectin",
+   "moxidectin",
+   "eprinomectin"
+  ],
+  "scientific_name": null,
+  "category": "medicine",
+  "severity": "mild",
+  "summary": "Prescription spot-on treatments for fleas, worms and mites, made for cats. Safe in a product labelled for cats at the right dose.",
+  "what_to_do": "Use only a product labelled for cats, at the dose for {poss} weight.\nIf {name} got a dog product, or more than one dose, call your vet now.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
+ },
+ {
+  "name": "Pyrantel (dewormer)",
+  "aliases": [
+   "pyrantel",
+   "pyrantel pamoate",
+   "praziquantel",
+   "fenbendazole"
+  ],
+  "scientific_name": null,
+  "category": "medicine",
+  "severity": "mild",
+  "summary": "Common cat dewormers. Safe at the dose for her weight in a product made for cats; an overdose can cause vomiting.",
+  "what_to_do": "Use only a product labelled for cats, at the dose for {poss} weight.\nIf {name} got a dog product, or more than one dose, call your vet now.",
+  "toxic_principle": null,
+  "source": "AquaOne Health list, from published veterinary poison-control guidance"
  }
 ]
