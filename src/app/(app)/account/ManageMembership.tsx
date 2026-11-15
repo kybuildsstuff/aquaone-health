@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { LOOP_PORTAL_URL } from "@/lib/account";
 import { Chevron } from "./parts";
 
@@ -27,6 +28,20 @@ export default function ManageMembership({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
+
+  // A member in her free month or paying cancels in the app, on Loop's own cancel steps
+  // (boards 22.1–23.1, Ky 15 Nov). Everyone else still manages billing in the store portal below.
+  if (canCancel) {
+    return (
+      <Link href="/account/cancel" className="flex min-h-[64px] items-center gap-3 rounded-[22px] bg-white px-[18px] py-3.5 text-left">
+        <span className="flex flex-1 flex-col gap-0.5">
+          <span className="text-[16px] leading-5 font-semibold">Cancel membership</span>
+          <span className="text-[14px] leading-[18px] text-slate">One tap. No calls, no forms.</span>
+        </span>
+        <Chevron />
+      </Link>
+    );
+  }
 
   return (
     <>
