@@ -169,7 +169,7 @@ describe("email copy", () => {
       expect(body).toContain("Wednesday, December 16");
       expect(body).toContain("$19.95 every 30 days");
       expect(body).toContain("https://app.trypurestream.com/account");
-      expect(body).toMatch(/Manage or cancel membership/);
+      expect(body).toMatch(/tap (<b>)?Cancel membership/);
       expect(body).toContain("help@trypurestream.com");
       expect(body).not.toMatch(banned);
     }

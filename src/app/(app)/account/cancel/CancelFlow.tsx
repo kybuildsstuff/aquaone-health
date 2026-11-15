@@ -73,8 +73,9 @@ export default function CancelFlow(p: Props) {
     run(async () => {
       if (reasonId == null || !offer) return;
       await call({ action: "accept", reasonId, offerId: offer.id });
+      // No router.refresh(): refreshing this page after a change could redirect away from the
+      // confirmation. Every page she opens next is server-rendered fresh.
       setStep("kept");
-      router.refresh();
     });
 
   const cancel = () =>
@@ -82,7 +83,6 @@ export default function CancelFlow(p: Props) {
       if (reasonId == null) return;
       await call({ action: "cancel", reasonId });
       setStep("cancelled");
-      router.refresh();
     });
 
   const removeCat = () =>

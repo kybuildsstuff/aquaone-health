@@ -37,9 +37,9 @@ export async function loadCat(supabase: SupabaseClient): Promise<AccountCat | nu
 }
 
 export async function loadPrefs(supabase: SupabaseClient, userId: string) {
-  const { data, error } = await supabase.from("reminder_prefs").select("by_email, checkin_time, timezone").eq("user_id", userId).maybeSingle();
+  const { data, error } = await supabase.from("reminder_prefs").select("by_email, checkin_time, timezone, monthly_summary_on, checkin_on").eq("user_id", userId).maybeSingle();
   if (error) throw new Error(`reminder_prefs read failed: ${error.message}`);
-  return data as { by_email: boolean; checkin_time: string; timezone: string } | null;
+  return data as { by_email: boolean; checkin_time: string; timezone: string; monthly_summary_on: boolean; checkin_on: boolean } | null;
 }
 
 export async function loadAccount(supabase: SupabaseClient) {
@@ -78,6 +78,8 @@ export async function updateReminders(supabase: SupabaseClient, input: ReminderI
       by_email: input.byEmail,
       by_text: false,
       checkin_time: input.checkinTime,
+      ...(input.monthlySummary !== undefined ? { monthly_summary_on: input.monthlySummary } : {}),
+      ...(input.nudge !== undefined ? { checkin_on: input.nudge } : {}),
       ...(input.timezone && safeTimezone(input.timezone) === input.timezone ? { timezone: input.timezone } : {}),
     });
   if (error) return { ok: false, status: 500, error: "save_failed", detail: error.message };

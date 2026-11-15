@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
 import { loadAccount } from "@/lib/account.server";
-import { reminderSummary } from "@/lib/account";
+import { emailsSummary } from "@/lib/account";
 import { capital, words } from "@/lib/cat";
 import { RowGroup, RowLink, ScreenHeader } from "./parts";
 import ManageMembership from "./ManageMembership";
@@ -73,7 +73,7 @@ export default async function AccountPage() {
       </section>
 
       <RowGroup>
-        <RowLink href="/account/reminders" title="Reminders" value={reminderSummary(a.prefs)} />
+        <RowLink href="/account/reminders" title="Emails" value={emailsSummary(a.prefs)} />
         {cat ? <RowLink href="/account/cat" title={`${capital(w.poss)} vet`} value={cat.vet_name || "Add"} /> : null}
         <RowLink href="/help" title="Help and support" />
         <RowLink href="/account/legal" title="About and legal" />

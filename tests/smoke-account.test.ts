@@ -83,10 +83,11 @@ describe.skipIf(!APP)(`account smoke (${APP})`, () => {
     const html = await page.text();
     expect(html).toMatch(/Free until [A-Z][a-z]{2} \d{1,2}/);
     expect(html).toContain("Free month");
-    expect(html).toContain("Manage or cancel membership");
+    expect(html).toContain("Cancel membership");
+    expect(html).toContain("/account/cancel");
     expect(html).toContain("Smoke");
     expect(html).toContain("Sign out");
-    for (const p of ["/account/cat", "/account/reminders", "/account/legal"]) expect((await call(p)).status, p).toBe(200);
+    for (const p of ["/account/cat", "/account/reminders", "/account/legal", "/account/cancel"]) expect((await call(p)).status, p).toBe(200);
   });
 
   it("edit cat: invalid is refused with 400, valid saves through her session", async () => {

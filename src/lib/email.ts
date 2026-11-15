@@ -8,7 +8,9 @@ export const REPLY_TO = "help@trypurestream.com";
 export const HELP_EMAIL = "help@trypurestream.com";
 export const PRICE = "$19.95";
 
-export type EmailKind = "welcome" | "trial_ending";
+// "monthly:<charge date>", "nudge:<yyyy-mm>" and "alert:<alert id>" make those emails once per cycle,
+// month or alert under the same unique (member, kind) claim.
+export type EmailKind = "welcome" | "trial_ending" | `monthly:${string}` | `nudge:${string}` | `alert:${string}`;
 
 export type EmailMember = {
   id: string;
@@ -134,9 +136,9 @@ export function trialEndingEmail(trialEndsAt: string, tz?: string | null): Messa
     heading: `Your free month ends ${date}`,
     intro: `From then, AquaOne Health is ${PRICE} every 30 days, on the card you used for your AquaOne. If you'd like to keep it, there's nothing to do.`,
     button: { label: "Manage or cancel", href: account },
-    note: "In the app: Account, then Manage or cancel membership.",
+    note: "In the app: Account, then Cancel membership.",
     panels: [
-      `${label("IF YOU'D RATHER STOP")}Open Account in the app and tap <b>Manage or cancel membership</b> before ${date}, and you won't be charged. You keep full access until then.`,
+      `${label("IF YOU'D RATHER STOP")}Open Account in the app and tap <b>Cancel membership</b> before ${date}, and you won't be charged. You keep full access until then.`,
     ],
   });
   const text = [
@@ -144,10 +146,147 @@ export function trialEndingEmail(trialEndsAt: string, tz?: string | null): Messa
     "",
     `From then, AquaOne Health is ${PRICE} every 30 days, on the card you used for your AquaOne. If you'd like to keep it, there's nothing to do.`,
     "",
-    `If you'd rather stop: open Account in the app and tap Manage or cancel membership before ${date}, and you won't be charged. You keep full access until then.`,
+    `If you'd rather stop: open Account in the app and tap Cancel membership before ${date}, and you won't be charged. You keep full access until then.`,
     account,
     "",
     `Questions? Just reply, or write to ${HELP_EMAIL}.`,
   ].join("\n");
   return { subject: `Your free month of AquaOne Health ends ${date}`, html, text };
+}
+
+// ---- Retention v1 emails (Ky, 15 Nov): monthly summary, nudge, Kidney Watch alert -------------------
+// Only five kinds of email ever go out: welcome, trial ending, these three. No daily or weekly email.
+
+const DAY = 24 * HOUR;
+
+// The next charge: the end of the free month while in trial, the paid-through date once paying.
+export function nextChargeAt(m: Pick<EmailMember, "status" | "trial_ends_at" | "paid_through">): string | null {
+  if (m.status === "trial") return m.trial_ends_at ?? m.paid_through;
+  if (m.status === "active") return m.paid_through ?? m.trial_ends_at;
+  return null;
+}
+
+// Monthly summary: once per billing cycle, when the next charge is more than 2 and at most 3 days
+// away (the daily run finds it once; a missed run is caught the next day by the once-only claim).
+export function monthlyWindow(now: Date): { after: string; atMost: string } {
+  return { after: new Date(now.getTime() + 2 * DAY).toISOString(), atMost: new Date(now.getTime() + 4 * DAY).toISOString() };
+}
+
+export function monthlyDue(m: EmailMember, now: Date, prefsOn = true): boolean {
+  const at = nextChargeAt(m);
+  if (!prefsOn || !at || !emailable(m)) return false;
+  const t = new Date(at).getTime();
+  const { after, atMost } = monthlyWindow(now);
+  return t > new Date(after).getTime() && t <= new Date(atMost).getTime();
+}
+
+export const monthlyKind = (m: Pick<EmailMember, "status" | "trial_ends_at" | "paid_through">) => `monthly:${(nextChargeAt(m) ?? "").slice(0, 10)}` as const;
+
+// Nudge: one email when none of her cats has had a check-in for 5 days, at most once a calendar
+// month, never in her first 5 days, only while she can use the app and has it switched on.
+export const NUDGE_QUIET_DAYS = 5;
+
+export function nudgeDue(m: EmailMember, lastCheckInAt: string | null, now: Date, prefsOn = true): boolean {
+  if (!prefsOn || !emailable(m) || (m.status !== "trial" && m.status !== "active")) return false;
+  if (now.getTime() - new Date(m.created_at).getTime() < NUDGE_QUIET_DAYS * DAY) return false;
+  const last = lastCheckInAt ? new Date(lastCheckInAt).getTime() : new Date(m.created_at).getTime();
+  return now.getTime() - last >= NUDGE_QUIET_DAYS * DAY;
+}
+
+export const nudgeKind = (now: Date) => `nudge:${now.toISOString().slice(0, 7)}` as const;
+
+export type SummaryCat = {
+  name: string;
+  checkIns: number;
+  drinking: string;
+  weight: string;
+  breathing: string;
+  steady: boolean;
+  ageYears: number | null;
+  openAlert: string | null;
+};
+
+const tile = (k: string, v: string, good: boolean) =>
+  `<td style="background:#13294B;border-radius:12px;padding:9px 10px;width:33%"><div style="font-size:11px;line-height:14px;color:#8FA0C4">${esc(k)}</div><div style="font-size:14px;line-height:18px;font-weight:600;color:${good ? "#7FE0B4" : "#FFFFFF"}">${esc(v)}</div></td>`;
+
+// "One thing for next month": from fixed rules, never from the model, and never a diagnosis.
+export function oneThing(cats: SummaryCat[], month: string): string {
+  const flagged = cats.find((c) => c.openAlert);
+  if (flagged) return `${flagged.name}'s Kidney Watch has flagged a change (${flagged.openAlert!.toLowerCase()}). If it carries on, call your vet and share the report.`;
+  const senior = cats.filter((c) => (c.ageYears ?? 0) >= 11).sort((a, b) => (b.ageYears ?? 0) - (a.ageYears ?? 0))[0];
+  if (senior) return `Book ${senior.name}'s kidney check. Cats 11 and over are usually checked every 6 to 12 months, and the report is ready to bring.`;
+  const quiet = cats.find((c) => c.checkIns < 10);
+  if (quiet) return `Check in on ${quiet.name} each day in ${month}. The more check-ins, the sooner Kidney Watch learns ${quiet.name}'s normal.`;
+  return `Keep the daily check-ins going in ${month}. A steady record is what makes a change easy to spot.`;
+}
+
+export function monthlySummaryEmail(cats: SummaryCat[], opts: { nextMonth: string; checkInsTotal: number; days: number; trialCharge?: { date: string } | null }): Message {
+  const names = cats.map((c) => c.name);
+  const who = names.length <= 1 ? (names[0] ?? "Your cat") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+  const steady = cats.every((c) => c.steady);
+  const subject = `${who}'s month${steady ? ": all steady" : ""}`;
+  const headline = steady ? (cats.length > 1 ? "A steady month for all of them." : `${who} had a steady month.`) : "Here's how the month went.";
+  const intro = `You checked in on ${opts.checkInsTotal} of ${opts.days} days.${steady ? " Drinking, weight and breathing all stayed in their normal range." : ""}`;
+  const thing = oneThing(cats, opts.nextMonth);
+  const report = `${APP_URL}/report`;
+  const catBlocks = cats
+    .map((c) => `<div style="margin:14px 0 6px;font-size:13px;font-weight:600;color:#FFFFFF;text-align:left">${esc(c.name)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="6" style="margin:0 -6px"><tr>${tile("Drinking", c.drinking, c.drinking === "Normal")}${tile("Weight", c.weight, c.steady)}${tile("Breathing", c.breathing, c.steady && c.breathing !== "Not counted")}</tr></table>`)
+    .join("");
+  const billing = opts.trialCharge
+    ? `<span style="color:#5B6478">Your free month ends ${esc(opts.trialCharge.date)}. From then it's ${PRICE} every 30 days; there's nothing to do to keep it. To stop, open Account in the app and tap <b>Cancel membership</b> before ${esc(opts.trialCharge.date)}.</span>`
+    : null;
+  const html = layout({
+    preheader: `${intro} One thing for ${opts.nextMonth}: ${thing}`,
+    heading: headline,
+    intro: `${esc(intro)}${catBlocks}`,
+    button: { label: "Open the vet report", href: report },
+    panels: [`${label(`ONE THING FOR ${opts.nextMonth.toUpperCase()}`)}${esc(thing)}`, ...(billing ? [billing] : []), `<span style="color:#8A93A8;font-size:13px">You're getting this once a month as an AquaOne Health member. Turn it off in the app under Account, then Emails.</span>`],
+  });
+  const text = [
+    headline,
+    "",
+    intro,
+    "",
+    ...cats.map((c) => `${c.name}: drinking ${c.drinking}, weight ${c.weight}, breathing ${c.breathing}`),
+    "",
+    `One thing for ${opts.nextMonth}: ${thing}`,
+    "",
+    `Open the vet report: ${report}`,
+    ...(opts.trialCharge ? ["", `Your free month ends ${opts.trialCharge.date}. From then it's ${PRICE} every 30 days; there's nothing to do to keep it. To stop, open Account in the app and tap Cancel membership before ${opts.trialCharge.date}.`] : []),
+    "",
+    "You're getting this once a month as an AquaOne Health member. Turn it off in the app under Account, then Emails.",
+  ].join("\n");
+  return { subject, html, text };
+}
+
+export function nudgeEmail(catNames: string[]): Message {
+  const who = catNames.length === 1 ? catNames[0] : catNames.length > 1 ? `${catNames.slice(0, -1).join(", ")} and ${catNames.at(-1)}` : "your cat";
+  const today = `${APP_URL}/today`;
+  const heading = `We haven't heard about ${who} in ${NUDGE_QUIET_DAYS} days`;
+  const intro = `Kidney Watch learns ${catNames.length > 1 ? "each cat's" : `${who}'s`} normal from your check-ins. One tap tells us how much ${who === "your cat" ? "they" : who} drank today: less, normal or more.`;
+  const html = layout({
+    preheader: intro,
+    heading,
+    intro: esc(intro),
+    button: { label: "Check in now", href: today },
+    panels: [`<span style="color:#8A93A8;font-size:13px">We send this at most once a month. Turn it off in the app under Account, then Emails.</span>`],
+  });
+  const text = [heading, "", intro, "", `Check in now: ${today}`, "", "We send this at most once a month. Turn it off in the app under Account, then Emails."].join("\n");
+  return { subject: `How's ${who} drinking this week?`, html, text };
+}
+
+// The Kidney Watch alert email reuses the app's own alert wording (headline and what-to-do), never
+// new medical copy (brief: retention-v1, rulings). Red alerts lead with calling the vet.
+export function alertEmail(opts: { catName: string; headline: string; whatToDo: string; red: boolean; catId: string }): Message {
+  const url = `${APP_URL}/watch`;
+  const heading = opts.headline;
+  const html = layout({
+    preheader: `Kidney Watch: ${opts.headline}`,
+    heading,
+    intro: esc(opts.red ? `This is worth acting on today. ${opts.whatToDo}` : opts.whatToDo),
+    button: { label: "See what to do", href: url },
+    panels: [`<span style="color:#8A93A8;font-size:13px">AquaOne Health doesn't diagnose. If ${esc(opts.catName)} seems unwell, call your vet. Kidney Watch alerts are always on.</span>`],
+  });
+  const text = [heading, "", opts.red ? `This is worth acting on today. ${opts.whatToDo}` : opts.whatToDo, "", `See what to do: ${url}`, "", `AquaOne Health doesn't diagnose. If ${opts.catName} seems unwell, call your vet.`].join("\n");
+  return { subject: `Kidney Watch: ${opts.headline}`, html, text };
 }

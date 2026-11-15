@@ -2,7 +2,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { loadPrefs } from "@/lib/account.server";
 import RemindersForm from "./RemindersForm";
 
-export const metadata = { title: "Reminders · AquaOne Health" };
+export const metadata = { title: "Emails · AquaOne Health" };
 export const dynamic = "force-dynamic";
 
 export default async function RemindersPage() {
@@ -10,5 +10,5 @@ export default async function RemindersPage() {
   const { data } = await supabase.auth.getUser();
   const prefs = data.user ? await loadPrefs(supabase, data.user.id) : null;
   const time = (prefs?.checkin_time ?? "08:00").slice(0, 5);
-  return <RemindersForm initial={{ byEmail: prefs?.by_email ?? true, checkinTime: (["08:00", "12:00", "19:00"].includes(time) ? time : "08:00") as "08:00" }} />;
+  return <RemindersForm email={data.user?.email ?? ""} initial={{ byEmail: prefs?.by_email ?? true, checkinTime: (["08:00", "12:00", "19:00"].includes(time) ? time : "08:00") as "08:00", monthlySummary: prefs?.monthly_summary_on ?? true, nudge: prefs?.checkin_on ?? true }} />;
 }

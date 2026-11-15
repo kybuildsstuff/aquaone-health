@@ -13,6 +13,8 @@ import {
   type weighInSchema,
 } from "@/lib/kidney-watch";
 import type { z } from "zod";
+import type { KwReason } from "@/lib/kidney-watch";
+import { emailNewAlert } from "@/lib/email.server";
 
 // Everything here runs with HER client (row-level security applies), except the
 // alert writes in recomputeKidneyWatch, which are documented where they happen.
@@ -69,9 +71,12 @@ export async function recomputeKidneyWatch(supabase: SupabaseClient, catId: stri
   const plan = planAlertSync(status.reasons, open ?? []);
 
   for (const a of plan.toOpen) {
-    const { error } = await admin.from("alerts").insert({ cat_id: catId, kind: a.kind, level: a.level });
+    const { data: opened, error } = await admin.from("alerts").insert({ cat_id: catId, kind: a.kind, level: a.level }).select("id").maybeSingle();
     // 23505: another request opened the same alert a moment ago (one open alert per kind).
     if (error && error.code !== "23505") throw new Error(`alert open failed: ${error.message}`);
+    // A newly opened alert is emailed once (retention v1: Kidney Watch alerts are always on).
+    // Never blocks or fails the check-in: the email is best effort and logged.
+    if (opened?.id) await emailNewAlert(supabase, catId, a.kind as KwReason, status, opened.id as string);
   }
   if (plan.toResolve.length) {
     const { error } = await admin.from("alerts").update({ resolved_at: new Date().toISOString() }).in("id", plan.toResolve);

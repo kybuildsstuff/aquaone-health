@@ -149,6 +149,10 @@ export const reminderSchema = z.object({
   // Her phone's timezone, sent with every save, so a missing or wrong one (the New York default)
   // corrects itself the first time she touches her reminders (audit, 15 Nov).
   timezone: z.string().max(64).optional(),
+  // Retention v1 (board 35.1): the two emails she can switch off. Kidney Watch alerts and billing
+  // notices are always on. Optional so older clients keep working.
+  monthlySummary: z.boolean().optional(),
+  nudge: z.boolean().optional(),
 });
 export type ReminderInput = z.output<typeof reminderSchema>;
 
@@ -160,6 +164,15 @@ export function timeLabel(t: string | null | undefined): string {
   const suffix = h >= 12 ? "pm" : "am";
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return m ? `${h12}:${String(m).padStart(2, "0")} ${suffix}` : `${h12} ${suffix}`;
+}
+
+// The Account row for board 35.1: which of the switchable emails are on.
+export function emailsSummary(prefs: { monthly_summary_on?: boolean | null; checkin_on?: boolean | null } | null): string {
+  const monthly = prefs?.monthly_summary_on ?? true;
+  const nudge = prefs?.checkin_on ?? true;
+  if (monthly && nudge) return "All on";
+  if (!monthly && !nudge) return "Alerts only";
+  return monthly ? "Summary on" : "Nudge on";
 }
 
 export function reminderSummary(prefs: { by_email: boolean; checkin_time: string } | null): string {
