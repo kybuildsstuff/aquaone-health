@@ -1,3 +1,4 @@
+import ShownCat from "@/components/ShownCat";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getContext } from "@/lib/app-data.server";
@@ -18,5 +19,10 @@ export default async function WeighInPage() {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return <WeighInFlow catName={ctx.cat.name} lastLb={last ? Number(last.cat_lb) : null} />;
+  return (
+    <>
+      <ShownCat id={ctx.cat.id} />
+      <WeighInFlow catName={ctx.cat.name} lastLb={last ? Number(last.cat_lb) : null} />
+    </>
+  );
 }

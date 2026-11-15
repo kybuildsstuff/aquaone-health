@@ -1,3 +1,4 @@
+import ShownCat from "@/components/ShownCat";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { getContext } from "@/lib/app-data.server";
@@ -9,5 +10,10 @@ export const dynamic = "force-dynamic";
 export default async function BreathingPage() {
   const ctx = await getContext(await supabaseServer());
   if (!ctx) redirect("/onboarding");
-  return <BreathingCounter catName={ctx.cat.name} pronoun={ctx.cat.pronoun} />;
+  return (
+    <>
+      <ShownCat id={ctx.cat.id} />
+      <BreathingCounter catName={ctx.cat.name} pronoun={ctx.cat.pronoun} />
+    </>
+  );
 }

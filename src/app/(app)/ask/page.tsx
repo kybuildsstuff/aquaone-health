@@ -4,6 +4,7 @@ import { getContext } from "@/lib/app-data.server";
 import { questionsToday, signPhotos } from "@/lib/ask.server";
 import { DAILY_QUESTION_CAP, detectRedFlags, type FlagId } from "@/lib/ask";
 import AskChat, { type ChatItem } from "./AskChat";
+import CatSwitcher from "@/components/CatSwitcher";
 
 export const metadata = { title: "Ask · AquaOne Health" };
 export const dynamic = "force-dynamic";
@@ -36,6 +37,8 @@ export default async function AskPage() {
 
   return (
     <AskChat
+      key={ctx.cat.id}
+      switcher={<CatSwitcher cats={ctx.cats} currentId={ctx.cat.id} />}
       cat={{ name: ctx.cat.name, pronoun: ctx.cat.pronoun, vetName: ctx.cat.vet_name, vetPhone: ctx.cat.vet_phone }}
       tz={ctx.tz}
       initial={items}

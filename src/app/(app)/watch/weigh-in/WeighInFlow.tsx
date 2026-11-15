@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Check, PrimaryButton } from "@/components/ui";
 import { CloseButton } from "@/components/watch";
 import { actionErrorMessage, LB_PER_KG, weighInPounds } from "@/lib/kidney-watch";
+import { catHeader } from "@/lib/cat-client";
 
 const parse = (s: string) => {
   const n = parseFloat(s.replace(",", "."));
@@ -38,7 +39,7 @@ export default function WeighInFlow({ catName, lastLb }: { catName: string; last
     setError(null);
     const res = await fetch("/api/weigh-ins", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...catHeader() },
       body: JSON.stringify({ ownerWeight: ownN, withCatWeight: withN, unit }),
     }).catch(() => null);
     if (res?.ok) {

@@ -7,6 +7,16 @@ export type Drink = "less" | "normal" | "more";
 
 // Reads for the Today and Kidney Watch screens, all with her own client (RLS).
 
+// Her other active cats with no check-in yet today (Every cat in the house, 3a).
+async function othersToCheckIn(supabase: SupabaseClient, ctx: Ctx): Promise<{ id: string; name: string }[]> {
+  const others = ctx.cats.filter((c) => c.id !== ctx.cat.id);
+  if (!others.length) return [];
+  const { data, error } = await supabase.from("check_ins").select("cat_id").in("cat_id", others.map((c) => c.id)).eq("date", ctx.today);
+  if (error) throw new Error(`check_ins read failed: ${error.message}`);
+  const done = new Set((data ?? []).map((r) => r.cat_id as string));
+  return others.filter((c) => !done.has(c.id));
+}
+
 export async function loadToday(supabase: SupabaseClient) {
   const ctx = await getContext(supabase);
   if (!ctx) return null;
@@ -28,6 +38,7 @@ export async function loadToday(supabase: SupabaseClient) {
   const todayCheckIn = (checkIns.data ?? []).find((c) => c.date === ctx.today)?.drinking as Drink | undefined;
   return {
     ...ctx,
+    othersToCheckIn: await othersToCheckIn(supabase, ctx),
     status,
     plan,
     todayCheckIn: todayCheckIn ?? null,
@@ -41,13 +52,14 @@ export async function loadToday(supabase: SupabaseClient) {
 export async function loadWatch(supabase: SupabaseClient) {
   const ctx = await getContext(supabase);
   if (!ctx) return null;
-  const [status, checkIns, weighIns, breathing] = await Promise.all([
+  const [status, checkIns, weighIns, breathing, lab] = await Promise.all([
     kidneyWatchStatus(supabase, ctx.cat.id),
     supabase.from("check_ins").select("date, drinking").eq("cat_id", ctx.cat.id).gte("date", addDays(ctx.today, -13)),
     supabase.from("weigh_ins").select("date, cat_lb, created_at").eq("cat_id", ctx.cat.id).order("date", { ascending: false }).order("created_at", { ascending: false }).limit(12),
     supabase.from("breathing_counts").select("taken_at, breaths_per_min").eq("cat_id", ctx.cat.id).order("taken_at", { ascending: false }).limit(1),
+    supabase.from("lab_panels").select("taken_on").eq("cat_id", ctx.cat.id).order("taken_on", { ascending: false }).limit(1),
   ]);
-  for (const r of [checkIns, weighIns, breathing]) if (r.error) throw new Error(`watch read failed: ${r.error.message}`);
+  for (const r of [checkIns, weighIns, breathing, lab]) if (r.error) throw new Error(`watch read failed: ${r.error.message}`);
 
   const byDate = new Map((checkIns.data ?? []).map((c) => [c.date as string, c.drinking as Drink]));
   const last14 = Array.from({ length: 14 }, (_, i) => {
@@ -59,6 +71,7 @@ export async function loadWatch(supabase: SupabaseClient) {
     ...ctx,
     status,
     last14,
+    latestLabOn: (lab.data?.[0]?.taken_on as string | undefined) ?? null,
     dayNumber: dayNumber(ctx),
     weighIns: (weighIns.data ?? []).map((w) => ({ date: w.date as string, catLb: Number(w.cat_lb) })).reverse(),
     breathing: latestBreath

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { CloseButton } from "@/components/watch";
 import { actionErrorMessage, BREATHING_RED_OVER, BREATHING_SECONDS, breathsPerMinute } from "@/lib/kidney-watch";
 import { words, type Pronoun } from "@/lib/cat";
+import { catHeader } from "@/lib/cat-client";
 
 type Phase = "ready" | "counting" | "done";
 const R = 130;
@@ -69,7 +70,7 @@ export default function BreathingCounter({ catName, pronoun }: { catName: string
     setError(null);
     const res = await fetch("/api/breathing", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...catHeader() },
       body: JSON.stringify({ breaths: taps }),
     }).catch(() => null);
     if (res?.ok) {

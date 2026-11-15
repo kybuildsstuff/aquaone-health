@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { supabaseServer } from "@/lib/supabase/server";
-import { getSafeCat, recentLookups } from "@/lib/safe.server";
+import { getSafeCats, recentLookups } from "@/lib/safe.server";
 import { POISON_LINES } from "@/lib/safe";
 import { capital, words } from "@/lib/cat";
 import { TabScreen } from "@/components/TabBar";
 import { PhoneIcon, SeverityBadge, SproutIcon } from "./parts";
 import SafeSearch from "./SafeSearch";
+import CatSwitcher from "@/components/CatSwitcher";
 
 export const metadata = { title: "Is it safe? · AquaOne Health" };
 export const dynamic = "force-dynamic";
@@ -44,17 +45,18 @@ const TILES = [
 
 export default async function SafeHome() {
   const supabase = await supabaseServer();
-  const cat = await getSafeCat(supabase);
+  const { cat, cats } = await getSafeCats(supabase);
   const recent = cat ? await recentLookups(supabase, cat.id) : [];
   const subj = capital(words(cat?.pronoun).subj);
 
   return (
-    <TabScreen>
+    <TabScreen key={cat?.id ?? "none"}>
       <div className="flex flex-col gap-4.5 px-5 pt-[max(26px,env(safe-area-inset-top))]">
         <header className="flex flex-col gap-0.5 px-1">
           <p className="text-sm leading-4.5 font-medium text-slate">Plants, foods, cleaning products</p>
           <h1 className="text-3xl leading-8.75 font-medium tracking-[-0.02em]">Is it safe for {cat?.name ?? "your cat"}?</h1>
         </header>
+        {cat ? <CatSwitcher cats={cats} currentId={cat.id} /> : null}
 
         <SafeSearch>
           <div className="grid grid-cols-4 gap-2.5">

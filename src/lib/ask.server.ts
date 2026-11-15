@@ -215,12 +215,13 @@ function ndjson(events: AskEvent[]) {
   return new Response(events.map((e) => JSON.stringify(e)).join("\n") + "\n", { headers: { "content-type": "application/x-ndjson; charset=utf-8" } });
 }
 
-// Her questions since midnight in her own timezone (the cap resets at her midnight).
+// Her questions since midnight in her own timezone (the cap resets at her midnight). The cap is
+// per member across all her cats (Ky, 15 Nov, 2a): no cat filter, and her own session's RLS
+// limits the count to her cats, archived ones included.
 export async function questionsToday(supabase: SupabaseClient, ctx: Ctx, at: Date = new Date()): Promise<number> {
   const { count, error } = await supabase
     .from("chat_messages")
     .select("id", { count: "exact", head: true })
-    .eq("cat_id", ctx.cat.id)
     .eq("role", "user")
     .gte("created_at", localMidnightUtc(ctx.tz, at).toISOString());
   if (error) throw new Error(`cap count failed: ${error.message}`);
@@ -249,8 +250,7 @@ export async function photosToday(supabase: SupabaseClient, ctx: Ctx, at: Date =
   const { count, error } = await supabase
     .from("chat_messages")
     .select("id", { count: "exact", head: true })
-    .eq("cat_id", ctx.cat.id)
-    .eq("role", "user")
+    .eq("role", "user") // per member across her cats, like questionsToday
     .not("photo_path", "is", null)
     .gte("created_at", localMidnightUtc(ctx.tz, at).toISOString());
   if (error) throw new Error(`photo cap count failed: ${error.message}`);

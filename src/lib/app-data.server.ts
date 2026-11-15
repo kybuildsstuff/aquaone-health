@@ -1,4 +1,5 @@
 import "server-only";
+import { chosenCat } from "@/lib/cats.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { addDays, localDate, safeTimezone } from "@/lib/dates";
@@ -24,30 +25,27 @@ export type Cat = CatProfile & {
   created_at: string;
 };
 
-export type Ctx = { userId: string; cat: Cat; tz: string; today: string };
+// cats: every active cat she has (oldest first), for the switcher and the "still to check in" line.
+export type CatChoice = { id: string; name: string };
+export type Ctx = { userId: string; cat: Cat; cats: CatChoice[]; tz: string; today: string };
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string; detail?: string };
 const fail = (status: number, error: string, detail?: string) => ({ ok: false as const, status, error, detail });
 
-// Her cat (one per member in version 1), her timezone and her local "today".
+// Her chosen cat (Every cat in the house: the one remembered in her browser, else her first),
+// her other active cats, her timezone and her local "today".
 export async function getContext(supabase: SupabaseClient, at: Date = new Date()): Promise<Ctx | null> {
   // getClaims verifies the signed session locally (ES256), so no round trip to Supabase Auth.
   const { data: auth } = await supabase.auth.getClaims();
   const userId = auth?.claims.sub;
   if (!userId) return null;
-  const [{ data: cat, error }, { data: prefs }] = await Promise.all([
-    supabase
-      .from("cats")
-      .select("id, name, pronoun, age_years, lives, food, conditions, vet_name, vet_phone, created_at")
-      .order("created_at")
-      .limit(1)
-      .maybeSingle(),
+  const [{ cat, cats }, { data: prefs }] = await Promise.all([
+    chosenCat<Cat>(supabase, "id, name, pronoun, age_years, lives, food, conditions, vet_name, vet_phone, created_at"),
     supabase.from("reminder_prefs").select("timezone").eq("user_id", userId).maybeSingle(),
   ]);
-  if (error) throw new Error(`cat lookup failed: ${error.message}`);
   if (!cat) return null;
   const tz = safeTimezone(prefs?.timezone);
-  return { userId, cat: cat as Cat, tz, today: localDate(tz, at) };
+  return { userId, cat, cats: cats.map((c) => ({ id: c.id, name: c.name })), tz, today: localDate(tz, at) };
 }
 
 export async function kidneyWatchStatus(supabase: SupabaseClient, catId: string): Promise<KwStatus> {

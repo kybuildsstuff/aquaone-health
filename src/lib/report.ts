@@ -5,6 +5,7 @@ import { addDays } from "@/lib/dates";
 import { BREATHING_RED_OVER } from "@/lib/kidney-watch";
 import { CONDITIONS } from "@/lib/onboarding";
 import { vetLabel, type Pronoun } from "@/lib/cat";
+import type { ExplainedPanel } from "@/lib/bloodwork";
 
 // The report covers her last 30 local days, today included.
 export const REPORT_DAYS = 30;
@@ -43,7 +44,8 @@ export type ReportInput = {
   alerts: { kind: string; level: "amber" | "red"; opened_at: string; resolved_at: string | null }[];
 };
 
-export type Report = ReturnType<typeof buildReport>;
+// bloodwork: the newest lab panel explained (Bloodwork, explained), or null when there is none.
+export type Report = ReturnType<typeof buildReport> & { bloodwork?: ExplainedPanel | null };
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 

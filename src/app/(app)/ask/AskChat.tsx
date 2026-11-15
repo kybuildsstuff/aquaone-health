@@ -5,6 +5,7 @@ import { PHOTO_MAX_BYTES } from "@/lib/safe";
 import { Drop } from "@/components/ui";
 import { BackLink } from "@/components/watch";
 import { EMERGENCY_VET_MAPS_URL, telHref, vetLabel, words, type Pronoun } from "@/lib/cat";
+import { catHeader } from "@/lib/cat-client";
 import {
   revealMs,
   revealWords,
@@ -27,7 +28,7 @@ export type { ChatItem };
 type Cat = { name: string; pronoun: Pronoun; vetName: string | null; vetPhone: string | null };
 
 // The Ask screen from the Paper designs ("11 Ask" and "12 Ask · urgent").
-export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: Cat; tz: string; initial: ChatItem[]; initialRemaining: number }) {
+export default function AskChat({ cat, tz, initial, initialRemaining, switcher }: { cat: Cat; tz: string; initial: ChatItem[]; initialRemaining: number; switcher?: React.ReactNode }) {
   const [items, setItems] = useState<ChatItem[]>(initial);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -93,9 +94,9 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
         const form = new FormData();
         form.append("message", question.trim());
         form.append("photo", sending.blob, "photo.jpg");
-        res = await fetch("/api/ask", { method: "POST", body: form });
+        res = await fetch("/api/ask", { method: "POST", body: form, headers: catHeader() });
       } else {
-        res = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: q }) });
+        res = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json", ...catHeader() }, body: JSON.stringify({ message: q }) });
       }
     } catch {
       setError(askErrorMessage(null, undefined, cat.name));
@@ -171,6 +172,7 @@ export default function AskChat({ cat, tz, initial, initialRemaining }: { cat: C
           </p>
         </div>
       </header>
+      {switcher ? <div className="shrink-0 border-b border-[#EFEDE9] px-4 py-2.5">{switcher}</div> : null}
 
       <div ref={scroller} className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 pt-3.5 pb-3" aria-live="polite">
         {items.length === 0 ? (

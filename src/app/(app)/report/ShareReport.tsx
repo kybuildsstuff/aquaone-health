@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { actionErrorMessage } from "@/lib/kidney-watch";
+import { catHeader } from "@/lib/cat-client";
 
 // "Share with my vet" (decision 8): the phone's share sheet with the report link, plus the PDF
 // where the browser can share files. Without a share sheet, she gets Copy link and Download PDF.
@@ -23,11 +24,11 @@ export default function ShareReport({ catName, vet, pdfFile, activeLinks, latest
 
   async function prepare(): Promise<Prepared> {
     const [linkRes, pdf] = await Promise.all([
-      fetch("/api/report/share", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }).then(
+      fetch("/api/report/share", { method: "POST", headers: { "content-type": "application/json", ...catHeader() }, body: "{}" }).then(
         async (r) => ({ status: r.status, body: await r.json().catch(() => ({})) }),
         () => ({ status: null as number | null, body: {} as { error?: string } }),
       ),
-      fetch("/api/report/pdf").then(
+      fetch("/api/report/pdf", { headers: catHeader() }).then(
         async (r) => (r.ok ? r.blob() : (console.error("report_share_pdf_fetch_failed", r.status), null)),
         (e) => (console.error("report_share_pdf_fetch_failed network", e instanceof Error ? e.message : String(e)), null),
       ),
@@ -89,7 +90,7 @@ export default function ShareReport({ catName, vet, pdfFile, activeLinks, latest
   async function stopSharing() {
     setStopping(true);
     try {
-      const r = await fetch("/api/report/share/revoke", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+      const r = await fetch("/api/report/share/revoke", { method: "POST", headers: { "content-type": "application/json", ...catHeader() }, body: "{}" });
       if (!r.ok) {
         const body = await r.json().catch(() => ({}));
         console.error("report_share_revoke_failed", r.status, body.error ?? "");

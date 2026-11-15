@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getContext, type ActionResult } from "@/lib/app-data.server";
 import { addDays, localDate, safeTimezone } from "@/lib/dates";
 import { buildReport, reportPeriod, REPORT_DAYS, SHARE_LINK_DAYS, SHARE_TOKEN_BYTES, SHARE_TOKEN_PATTERN, type Report, type ReportInput } from "@/lib/report";
+import { latestPanel } from "@/lib/bloodwork.server";
 
 const fail = (status: number, error: string, detail?: string) => ({ ok: false as const, status, error, detail });
 
@@ -42,8 +43,9 @@ export async function loadReportData(client: SupabaseClient, catId: string, tz: 
     if (r.error) throw new Error(`report ${name} read failed: ${r.error.message}`);
   }
   if (!cat.data) return null;
+  const bloodwork = await latestPanel(client, catId, cat.data.name as string, today);
 
-  return buildReport(
+  const built = buildReport(
     {
       cat: cat.data as ReportInput["cat"],
       tz,
@@ -55,6 +57,7 @@ export async function loadReportData(client: SupabaseClient, catId: string, tz: 
     },
     days,
   );
+  return { ...built, bloodwork };
 }
 
 // Her own report, with her own session (RLS applies).
@@ -73,7 +76,7 @@ export async function loadOwnReport(supabase: SupabaseClient, at: Date = new Dat
   ]);
   if (links.error) throw new Error(`report_shares read failed: ${links.error.message}`);
   if (!report) return null;
-  return { report, activeLinks: links.data?.length ?? 0, latestLinkExpires: (links.data?.[0]?.expires_at as string | undefined) ?? null };
+  return { report, catId: ctx.cat.id, cats: ctx.cats, activeLinks: links.data?.length ?? 0, latestLinkExpires: (links.data?.[0]?.expires_at as string | undefined) ?? null };
 }
 
 // The cat a share token opens, or null when it is malformed, unknown, revoked or expired.

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Drop } from "@/components/ui";
 import { actionErrorMessage } from "@/lib/kidney-watch";
+import { catHeader } from "@/lib/cat-client";
 
 type Drink = "less" | "normal" | "more";
 const OPTIONS: { value: Drink; label: string }[] = [
@@ -24,7 +25,7 @@ export default function CheckInCard({ catName, initial }: { catName: string; ini
     setError(null);
     const res = await fetch("/api/check-ins", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...catHeader() },
       body: JSON.stringify({ drinking }),
     }).catch(() => null);
     setBusy(null);

@@ -4,6 +4,8 @@ import { findMember } from "@/lib/members.server";
 import { safeTimezone } from "@/lib/dates";
 import type { ActionResult } from "@/lib/app-data.server";
 import { catUpdate, membershipView, type CatEdit, type ReminderInput } from "@/lib/account";
+import { activeCats, chosenCat } from "@/lib/cats.server";
+import { archivedCats } from "@/lib/cats-actions.server";
 
 // Account reads and writes. Her cat and reminder settings go through HER client (row-level
 // security); the members row is read with the service role, as everywhere else (findMember).
@@ -24,8 +26,8 @@ export type AccountCat = {
 const CAT_COLUMNS = "id, name, pronoun, age_years, start_weight_lb, lives, food, conditions, vet_name, vet_phone";
 
 export async function loadCat(supabase: SupabaseClient): Promise<AccountCat | null> {
-  const { data, error } = await supabase.from("cats").select(CAT_COLUMNS).order("created_at").limit(1).maybeSingle();
-  if (error) throw new Error(`cat read failed: ${error.message}`);
+  // Her chosen cat (Every cat in the house).
+  const { cat: data } = await chosenCat<AccountCat>(supabase, CAT_COLUMNS);
   if (!data) return null;
   return {
     ...(data as AccountCat),
@@ -44,9 +46,15 @@ export async function loadAccount(supabase: SupabaseClient) {
   const { data: auth } = await supabase.auth.getUser();
   const user = auth.user;
   if (!user?.email) return null;
-  const [cat, prefs, member] = await Promise.all([loadCat(supabase), loadPrefs(supabase, user.id), findMember(user.email)]);
+  const [cat, prefs, member, cats, archived] = await Promise.all([
+    loadCat(supabase),
+    loadPrefs(supabase, user.id),
+    findMember(user.email),
+    activeCats<{ id: string; name: string }>(supabase, "id, name"),
+    archivedCats(supabase),
+  ]);
   const tz = safeTimezone(prefs?.timezone);
-  return { email: user.email, cat, prefs, tz, membership: membershipView(member, tz) };
+  return { email: user.email, cat, cats, archived, prefs, tz, membership: membershipView(member, tz) };
 }
 
 // Saves her edits to her own cat. The cat is found with her client, so another member's cat

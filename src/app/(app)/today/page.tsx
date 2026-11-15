@@ -9,6 +9,8 @@ import { TabScreen } from "@/components/TabBar";
 import { AlertBanner } from "@/components/watch";
 import CheckInCard from "./CheckInCard";
 import CarePlanCard from "./CarePlanCard";
+import CatSwitcher from "@/components/CatSwitcher";
+import OthersToCheckIn from "@/components/OthersToCheckIn";
 
 export const metadata = { title: "Today · AquaOne Health" };
 export const dynamic = "force-dynamic";
@@ -24,7 +26,7 @@ export default async function Today() {
   const learning = status.status === "learning";
 
   return (
-    <TabScreen>
+    <TabScreen key={cat.id}>
       <header className="flex items-center justify-between gap-3 pt-[max(20px,env(safe-area-inset-top))] pr-5 pl-6">
         <div className="flex flex-col gap-0.5 pt-1.5">
           <p className="text-sm leading-4.5 font-medium text-slate">{firstDay ? "Welcome" : t.greeting}</p>
@@ -42,9 +44,11 @@ export default async function Today() {
           </Link>
         </div>
       </header>
+      <CatSwitcher cats={t.cats} currentId={cat.id} todo={t.othersToCheckIn.map((c) => c.id)} className="px-5 pt-4" />
 
       <div className="flex flex-col gap-3 px-5 pt-5">
         {alert ? <AlertBanner {...alert} /> : null}
+        <OthersToCheckIn others={t.othersToCheckIn} />
         <CheckInCard catName={cat.name} initial={t.todayCheckIn} />
         <CarePlanCard tasks={t.plan.tasks.map(({ id, title, detail }) => ({ id, title, detail }))} initialDone={t.plan.doneIds} />
 

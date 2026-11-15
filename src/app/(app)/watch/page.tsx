@@ -8,6 +8,8 @@ import { relativeDay } from "@/lib/dates";
 import { Check, Drop } from "@/components/ui";
 import { TabScreen } from "@/components/TabBar";
 import { LearningRing } from "@/components/watch";
+import CatSwitcher from "@/components/CatSwitcher";
+import { monthLabel } from "@/lib/bloodwork";
 
 export const metadata = { title: "Kidney Watch · AquaOne Health" };
 export const dynamic = "force-dynamic";
@@ -46,13 +48,14 @@ export default async function Watch() {
   const breathRed = k.breathing != null && k.breathing.bpm > BREATHING_RED_OVER;
 
   return (
-    <TabScreen>
+    <TabScreen key={cat.id}>
       <header className="flex flex-col gap-0.5 px-6 pt-[max(26px,env(safe-area-inset-top))]">
         <p className="text-sm leading-4.5 font-medium text-slate">
           {status.status === "learning" ? (status.lapsed ? "Paused · needs recent check-ins" : `Day ${k.dayNumber} · building ${cat.name}'s baseline`) : `Learned from ${status.checkins_total} days of check-ins`}
         </p>
         <h1 className="text-3xl leading-8.75 font-medium tracking-[-0.02em]">Kidney Watch</h1>
       </header>
+      <CatSwitcher cats={k.cats} currentId={cat.id} className="px-5 pt-4" />
 
       <div className="flex flex-col gap-3 px-5 pt-4.5">
         {status.status === "amber" || status.status === "red" ? (
@@ -172,6 +175,22 @@ export default async function Watch() {
             </Link>
           </div>
         </div>
+
+        <Link href="/watch/bloodwork" className="flex items-center gap-3.5 rounded-[22px] bg-white px-4.5 py-4">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-lilac-soft">
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden>
+              <path d="M7 3h10M9 3v6l-4.5 8.5A2.4 2.4 0 0 0 6.6 21h10.8a2.4 2.4 0 0 0 2.1-3.5L15 9V3" fill="none" stroke="#5369EE" strokeWidth="2" strokeLinejoin="round" />
+              <path d="M7.5 15h9" stroke="#5369EE" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </span>
+          <span className="flex flex-1 flex-col gap-0.5">
+            <span className="text-[15px] leading-4.5 font-bold">Bloodwork</span>
+            <span className="text-[13px] leading-4.5 text-slate">
+              {k.latestLabOn ? `Latest results from ${monthLabel(k.latestLabOn, k.today)}. Tap to see what moved.` : "Snap a lab report and see each result in plain English."}
+            </span>
+          </span>
+          <span className="text-[15px] font-semibold text-blue">{k.latestLabOn ? "Open" : "Add"}</span>
+        </Link>
 
         {age != null && age >= 7 ? (
           <div className="flex items-center gap-3.5 rounded-[22px] bg-lilac-soft px-4.5 py-4">

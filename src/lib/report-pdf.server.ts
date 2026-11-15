@@ -1,6 +1,7 @@
 import "server-only";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import { BREATHING_NORMAL, DISCLAIMER, breathingSub, dayLabel, drinkingSub, profileLine, type Report } from "@/lib/report";
+import { POSITION_TEXT, changeText } from "@/lib/bloodwork";
 
 // The vet report as a US Letter PDF, drawn with pdf-lib (pure JavaScript: no browser, no
 // native modules, no font files on disk, so it runs on Vercel's Node runtime as-is).
@@ -196,6 +197,24 @@ export async function renderReportPdf(r: Report, generatedOn: string): Promise<U
     });
   }
   para("Kidney Watch flags 4 or more of the last 7 check-ins drinking more (or less), weight down 5% or more against 4 weeks earlier, and a sleeping breathing count over 30.", 8.5, MUTED);
+
+  // Bloodwork (the newest panel she photographed) -------------------------------------------
+  if (r.bloodwork) {
+    const b = r.bloodwork;
+    heading(`Bloodwork · results from ${dayLabel(b.taken_on, true)}${b.lab_name ? `, ${b.lab_name}` : ""}${b.previousOn ? ` (compared with ${dayLabel(b.previousOn, true)})` : ""}`);
+    for (const g of b.groups) {
+      for (const res of g.results) {
+        const right = [res.position ? POSITION_TEXT[res.position] : null, res.change ? changeText(res.change) : null].filter(Boolean).join(" · ");
+        row(`${res.label}  ${res.value_text}${res.unit ? ` ${res.unit}` : ""}`, right, res.position === "above" || res.position === "below" ? { color: RED } : {});
+      }
+    }
+    if (b.questions.length) {
+      y -= 4;
+      para("Questions from the owner:", 9, NAVY);
+      b.questions.forEach((q, i) => para(`${i + 1}. ${q}`, 9));
+    }
+    para("Read from a photo of the lab report by the owner's app and checked against the lab's printed ranges. Please confirm against the original.", 8.5, MUTED);
+  }
 
   // Profile ----------------------------------------------------------------------------
   heading("Profile");

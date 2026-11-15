@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "@/components/ui";
 import { actionErrorMessage } from "@/lib/kidney-watch";
+import { catHeader } from "@/lib/cat-client";
 
 type Task = { id: string; title: string; detail: string | null };
 
@@ -20,7 +21,7 @@ export default function CarePlanCard({ tasks, initialDone }: { tasks: Task[]; in
     setError(null);
     const res = await fetch("/api/care-plan", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...catHeader() },
       body: JSON.stringify({ taskId: id, done: nowDone }),
     }).catch(() => null);
     if (res?.ok) {

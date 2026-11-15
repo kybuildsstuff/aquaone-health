@@ -5,6 +5,7 @@ import { reminderSummary } from "@/lib/account";
 import { capital, words } from "@/lib/cat";
 import { RowGroup, RowLink, ScreenHeader } from "./parts";
 import ManageMembership from "./ManageMembership";
+import YourCats from "./YourCats";
 
 export const metadata = { title: "Account · AquaOne Health" };
 export const dynamic = "force-dynamic";
@@ -45,6 +46,8 @@ export default async function AccountPage() {
           Set up your cat
         </Link>
       )}
+
+      {cat ? <YourCats cats={a.cats} currentId={cat.id} archived={a.archived} /> : null}
 
       <section className="flex flex-col gap-2.5 rounded-[22px] bg-navy px-[18px] py-5 text-white" aria-label="Membership">
         <div className="flex items-center justify-between gap-3">

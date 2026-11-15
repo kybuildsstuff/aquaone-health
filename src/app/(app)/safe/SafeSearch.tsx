@@ -5,6 +5,7 @@ import { CATEGORY_LABEL, PHOTO_MAX_BYTES, pickMatch, type SafetyMatch } from "@/
 import { SeverityBadge } from "./parts";
 import LabelResult, { type LabelAnswer } from "./LabelResult";
 import { shrinkPhoto } from "@/lib/photo-client";
+import { catHeader } from "@/lib/cat-client";
 
 // The search box and camera button. While she types, matches from our list replace the tiles
 // (children); picking one, or the "not on our list" answer, logs the lookup and opens it.
@@ -56,7 +57,7 @@ export default function SafeSearch({ children }: { children: React.ReactNode }) 
     const query = q.trim();
     setOpening(true);
     try {
-      const res = await fetch("/api/safe/lookup", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ q: query, itemId }) });
+      const res = await fetch("/api/safe/lookup", { method: "POST", headers: { "content-type": "application/json", ...catHeader() }, body: JSON.stringify({ q: query, itemId }) });
       if (!res.ok) console.error("safe_lookup_failed", res.status, (await res.json().catch(() => ({}))).error ?? "");
     } catch (e) {
       // Logging must never stand between her and the answer.
@@ -98,7 +99,7 @@ export default function SafeSearch({ children }: { children: React.ReactNode }) 
       if (photo.size > PHOTO_MAX_BYTES) throw new PhotoError("too_large");
       const form = new FormData();
       form.append("photo", photo, "photo.jpg");
-      const res = await fetch("/api/safe/photo", { method: "POST", body: form });
+      const res = await fetch("/api/safe/photo", { method: "POST", body: form, headers: catHeader() });
       const body = (await res.json().catch(() => ({ error: "server_error" }))) as PhotoResponse;
       if (!res.ok || "error" in body) throw new PhotoError("error" in body ? body.error : `http_${res.status}`);
       if (body.kind === "label") {

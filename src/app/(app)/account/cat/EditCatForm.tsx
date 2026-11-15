@@ -6,6 +6,7 @@ import { CONDITIONS, saveErrorMessage } from "@/lib/onboarding";
 import { catEditSchema } from "@/lib/account";
 import { capital, words } from "@/lib/cat";
 import { ScreenHeader } from "../parts";
+import { catHeader } from "@/lib/cat-client";
 
 type Form = {
   name: string;
@@ -45,7 +46,7 @@ export default function EditCatForm({ initial }: { initial: Form }) {
     let status: number | null = null;
     let code: string | undefined;
     try {
-      const res = await fetch("/api/account/cat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(parsed.data) });
+      const res = await fetch("/api/account/cat", { method: "POST", headers: { "content-type": "application/json", ...catHeader() }, body: JSON.stringify(parsed.data) });
       status = res.status;
       code = (await res.json().catch(() => ({}))).error;
       if (res.ok) {

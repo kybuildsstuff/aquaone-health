@@ -6,6 +6,7 @@ import { CONFIDENT_SCORE, pickMatch, type PhotoType, type SafetyCategory, type S
 import type { Identification, Identifier } from "@/lib/safe-vision.server";
 import { buildLabelIndex, matchLabel, splitIngredients, type LabelFlag, type LabelIndexItem } from "@/lib/safe-label";
 import { fillCatWords } from "@/lib/safe";
+import { chosenCat } from "@/lib/cats.server";
 
 // Everything here runs with HER client, so row-level security applies: the list is readable by
 // any signed-in user, and lookups are written and read only for her own cat.
@@ -14,12 +15,15 @@ const fail = (status: number, error: string, detail?: string) => ({ ok: false as
 
 export type SafeCat = { id: string; name: string; pronoun: Pronoun; vet_name: string | null; vet_phone: string | null };
 
-// Her cat (one per member in version 1), or null before onboarding. Lookups need a cat to log
-// against; the list itself works without one.
+// Her chosen cat, or null before onboarding. Lookups need a cat to log against; the list itself
+// works without one.
+// The chosen cat and all her active cats, for the Safe home screen's switcher.
+export async function getSafeCats(supabase: SupabaseClient) {
+  return chosenCat<SafeCat>(supabase, "id, name, pronoun, vet_name, vet_phone");
+}
+
 export async function getSafeCat(supabase: SupabaseClient): Promise<SafeCat | null> {
-  const { data, error } = await supabase.from("cats").select("id, name, pronoun, vet_name, vet_phone").order("created_at").limit(1).maybeSingle();
-  if (error) throw new Error(`cat lookup failed: ${error.message}`);
-  return (data as SafeCat | null) ?? null;
+  return (await chosenCat<SafeCat>(supabase, "id, name, pronoun, vet_name, vet_phone")).cat;
 }
 
 async function searchOnce(supabase: SupabaseClient, q: string, max: number): Promise<SafetyMatch[]> {

@@ -1,3 +1,4 @@
+import ShownCat from "@/components/ShownCat";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { loadCat } from "@/lib/account.server";
@@ -12,6 +13,8 @@ export default async function EditCatPage() {
   if (!cat) redirect("/onboarding");
   const presetIds = new Set<string>(CONDITIONS.map((c) => c.id));
   return (
+    <>
+    <ShownCat id={cat.id} />
     <EditCatForm
       initial={{
         name: cat.name,
@@ -26,5 +29,6 @@ export default async function EditCatPage() {
         vetPhone: cat.vet_phone ?? "",
       }}
     />
+    </>
   );
 }

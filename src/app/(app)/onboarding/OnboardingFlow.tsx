@@ -4,9 +4,12 @@ import { useRouter } from "next/navigation";
 import { BackButton, Card, Check, Drop, LightButton, PrimaryButton, Progress, Segmented } from "@/components/ui";
 import { CONDITIONS, type OnboardingInput, saveErrorMessage } from "@/lib/onboarding";
 import AddToHomeScreen, { shouldOfferAddToHomeScreen } from "@/components/AddToHomeScreen";
+import { CAT_ERRORS } from "@/lib/cats";
 
 type Step = "welcome" | "name" | "basics" | "health" | "food" | "reminders" | "ready" | "home";
 const QUESTION_STEPS: Step[] = ["name", "basics", "health", "food", "reminders"];
+// Adding another cat (Every cat in the house) asks only about the cat: her reminders are already set.
+const ADD_STEPS: Step[] = ["name", "basics", "health", "food"];
 
 const PRONOUNS = {
   he: { subj: "he", obj: "him", poss: "his" },
@@ -16,9 +19,10 @@ const PRONOUNS = {
 
 const LIVES_TEXT = { indoor: "indoor", outdoor: "outdoor", both: "indoor-outdoor" } as const;
 
-export default function OnboardingFlow() {
+export default function OnboardingFlow({ addMode = false }: { addMode?: boolean }) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("welcome");
+  const steps = addMode ? ADD_STEPS : QUESTION_STEPS;
+  const [step, setStep] = useState<Step>(addMode ? "name" : "welcome");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [none, setNone] = useState(false);
@@ -42,10 +46,11 @@ export default function OnboardingFlow() {
 
   const name = form.name.trim() || "your cat";
   const p = PRONOUNS[form.pronoun];
-  const qIndex = QUESTION_STEPS.indexOf(step);
+  const qIndex = steps.indexOf(step);
+  const lastStep = steps[steps.length - 1];
 
-  const next = () => setStep(QUESTION_STEPS[qIndex + 1] ?? "ready");
-  const back = () => setStep(qIndex <= 0 ? "welcome" : QUESTION_STEPS[qIndex - 1]);
+  const next = () => setStep(steps[qIndex + 1] ?? "ready");
+  const back = () => (qIndex <= 0 ? (addMode ? router.back() : setStep("welcome")) : setStep(steps[qIndex - 1]));
 
   async function save() {
     setBusy(true);
@@ -53,13 +58,20 @@ export default function OnboardingFlow() {
     const res = await fetch("/api/onboarding", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ...form, conditions: none ? [] : form.conditions }),
+      body: JSON.stringify({ ...form, conditions: none ? [] : form.conditions, ...(addMode ? { add: true } : {}) }),
     }).catch(() => null);
     setBusy(false);
-    if (res?.ok) return setStep("ready");
+    if (res?.ok) {
+      if (addMode) {
+        router.replace("/today");
+        router.refresh();
+        return;
+      }
+      return setStep("ready");
+    }
     const body = res ? await res.json().catch(() => ({})) : {};
     if (body.error === "already_onboarded") return router.replace("/today");
-    setError(saveErrorMessage(res ? res.status : null, body.error));
+    setError(body.error === "cat_limit" ? CAT_ERRORS.cat_limit : saveErrorMessage(res ? res.status : null, body.error));
   }
 
   const conditionText = useMemo(() => {
@@ -144,7 +156,7 @@ export default function OnboardingFlow() {
     return <AddToHomeScreen catName={name} onDone={() => router.replace("/today")} />;
   }
 
-  const total = QUESTION_STEPS.length;
+  const total = steps.length;
   const canContinue = step !== "name" || form.name.trim().length > 0;
 
   return (
@@ -377,8 +389,8 @@ export default function OnboardingFlow() {
 
       <div className="flex flex-col gap-3 px-7 pt-6 pb-10">
         {error ? <p role="alert" className="rounded-2xl bg-[#FDECEE] px-4 py-3 text-[14px] text-[#8E2335]">{error}</p> : null}
-        {step === "reminders" ? (
-          <PrimaryButton onClick={save} disabled={busy}>{busy ? "Building…" : `Build ${name}'s plan`}</PrimaryButton>
+        {step === lastStep ? (
+          <PrimaryButton onClick={save} disabled={busy || !canContinue}>{busy ? (addMode ? "Adding…" : "Building…") : addMode ? `Add ${name}` : `Build ${name}'s plan`}</PrimaryButton>
         ) : (
           <PrimaryButton onClick={next} disabled={!canContinue}>Continue</PrimaryButton>
         )}
