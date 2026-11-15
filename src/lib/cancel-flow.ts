@@ -52,11 +52,11 @@ export function parseOffers(raw: unknown): CancelOffer[] {
     }));
 }
 
-// Half price of the membership, in cents, the way Shopify rounds a percentage discount: the discount
-// is rounded to the nearest cent and taken off, so $19.95 at 50% is $9.98 off, leaving $9.97.
-// The screens show the figure the test subscription confirms (brief: retention-v1, rulings).
+// Half price of the membership, in cents, the way Loop applies the 50% offer: the discount is rounded
+// down to the cent, so $19.95 becomes $9.98 (read from Loop on the live test subscription, 15 Nov:
+// discountedPrice 9.98).
 export function halfPriceCents(priceCents: number): number {
-  const off = Math.round(priceCents * 0.5);
+  const off = Math.floor(priceCents * 0.5);
   return priceCents - off;
 }
 

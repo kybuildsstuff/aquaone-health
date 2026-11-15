@@ -49,6 +49,7 @@ describe("half price", () => {
       expect(half * 2).toBeLessThanOrEqual(cents + 1);
       expect(half * 2).toBeGreaterThanOrEqual(cents - 1);
     }
-    expect(money(halfPriceCents(1995))).toMatch(/^\$9\.9[78]$/);
+    // Loop's real discounted price on the live test subscription (15 Nov): $9.98.
+    expect(money(halfPriceCents(1995))).toBe("$9.98");
   });
 });
