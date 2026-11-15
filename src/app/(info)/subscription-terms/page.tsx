@@ -1,66 +1,95 @@
 import Link from "next/link";
 import { Doc, H2, List, Mail } from "../Doc";
 
-// Draft — under legal review (decision 12: Claude drafts plain-English terms for launch; a
-// lawyer reviews them in December). Not marked on the page itself.
+// The same text as the store's subscription policy (Shopify: Settings → Policies → Purchase options
+// cancellation policy, approved by Ky 15 Nov 2026; source in ky-workspace aquaone-health/subscription_policy.md).
+// Change both together. Lawyer review in December.
 export const metadata = { title: "Subscription terms · AquaOne Health" };
 
 export default function SubscriptionTerms() {
   return (
-    <Doc title="Subscription terms" updated="November 17, 2026">
+    <Doc title="Subscription terms" updated="November 16, 2026">
       <p>
-        These terms explain how an AquaOne Health membership is billed and how to cancel it. AquaOne Health is run by PureStream (KYLO LLC). They sit
-        alongside our <Link href="/terms" className="font-semibold text-blue">Terms of use</Link>.
+        This policy explains how an AquaOne Health membership works: what it costs, how it renews, how to cancel, and when refunds apply. AquaOne
+        Health is run by PureStream, a business of KYLO LLC (&quot;we&quot;, &quot;us&quot;). It sits alongside our{" "}
+        <Link href="/terms" className="font-semibold text-blue">Terms of use</Link> and{" "}
+        <Link href="/privacy" className="font-semibold text-blue">Privacy policy</Link>.
       </p>
 
-      <H2>Price</H2>
+      <H2>How it works</H2>
+      <ol className="flex list-decimal flex-col gap-1.5 pl-5">
+        <li><b>Your first 30 days are free.</b> AquaOne Health is added at $0 when you buy an AquaOne with the AquaOne Health option switched on.</li>
+        <li><b>Then $19.95 every 30 days.</b> After your free month, your membership renews automatically at $19.95 every 30 days, plus any sales tax that applies where you live, until you cancel.</li>
+        <li><b>We remind you first.</b> We email you before your first charge, with the date and the price, so you have time to decide.</li>
+        <li><b>Cancel any time.</b> Cancel before your free month ends and you&apos;re never charged.</li>
+      </ol>
+
+      <H2>Billing</H2>
       <List
         items={[
-          "Your first 30 days are free.",
-          "After that, AquaOne Health costs $19.95 every 30 days, plus any sales tax that applies where you live.",
           "We charge the card or payment method you used at checkout on trypurestream.com.",
-          "Your membership renews automatically every 30 days until you cancel.",
+          "Renewals happen every 30 days from the date of your order, not on the same date each month.",
+          "One membership covers up to four cats.",
+          "Memberships can't be skipped or delayed.",
         ]}
       />
-
-      <H2>Before your first charge</H2>
-      <p>We email you 3 days before your free month ends, with the date and the price, so you have time to decide.</p>
 
       <H2>How to cancel</H2>
-      <p>You can cancel any time, with no calls and no forms to send. Either:</p>
+      <p>You can cancel any time, in a few taps:</p>
       <List
         items={[
-          <>In the app, open <b>Account</b>, then tap <b>Manage or cancel membership</b>. This takes you to your PureStream account, where you choose Cancel subscription.</>,
-          <>Or sign in to your account at trypurestream.com and cancel your AquaOne Health subscription there.</>,
-          <>Or write to <Mail /> and we will cancel it for you.</>,
+          <><b>In the app:</b> open Account, tap Manage or cancel membership, and follow the steps.</>,
+          <><b>On our website:</b> sign in to your account at trypurestream.com and cancel your AquaOne Health subscription.</>,
         ]}
       />
-      <p>If you cancel before your free month ends, you are never charged.</p>
-
-      <H2>What happens after you cancel</H2>
+      <p>When you cancel, we may offer you a discount to stay. Taking it is up to you, and each customer can receive it once.</p>
+      <p>If you have any trouble cancelling, email <Mail /> and we&apos;ll help you finish.</p>
       <p>
-        You keep full access until the end of your free month or the 30-day period you have already paid for, whichever is later. After that the app
-        stops working for you and you won&apos;t be charged again. We don&apos;t give partial refunds for the rest of a period, except where the law
-        requires it. If something went wrong with a charge, write to <Mail /> and we will look at it.
+        Your AquaOne Health membership is separate from your fountain order. Returning or refunding your AquaOne doesn&apos;t cancel your membership,
+        so please cancel it as well if you no longer want it.
       </p>
 
-      <H2>Pausing</H2>
+      <H2>After you cancel</H2>
       <p>
-        If you pause your subscription, we treat it like a cancellation while it is paused: you keep access until the end of what you have already got
-        (your free month or your paid period), then the app is locked until you resume. When you resume, billing and access start again.
+        You keep full access until the end of your free month or the 30-day period you&apos;ve already paid for, whichever is later. After that, the
+        app stops working for you and you won&apos;t be charged again. Your cat&apos;s history is kept for 12 months, so it&apos;s there if you come back.
+      </p>
+
+      <H2>Refunds</H2>
+      <p>
+        Because we email you before your first charge and you can cancel at any time before it, <b>membership charges are non-refundable</b>,
+        including renewals and any unused part of a 30-day period.
+      </p>
+      <p>
+        We will refund a charge in full if it was our mistake, for example if you were charged after you cancelled, or charged twice for the same
+        period. Email <Mail /> with the email address on your membership and we&apos;ll put it right.
       </p>
 
       <H2>If a payment fails</H2>
       <p>
-        If a renewal payment doesn&apos;t go through, access to the app is paused until it does. Updating your card in your PureStream account fixes it.
+        If a renewal payment doesn&apos;t go through, access to the app is paused until it does. Updating your payment details in your PureStream
+        account fixes it. If we still can&apos;t collect payment, we may cancel your membership.
       </p>
 
-      <H2>Changes to the price</H2>
-      <p>If we ever change the price, we will email you at least 30 days before your next charge at the new price, so you can cancel first if you want to.</p>
-
-      <H2>Questions</H2>
+      <H2>Discounts</H2>
       <p>
-        Write to <Mail />.
+        If you accept a discount to stay, it applies to every renewal for as long as your membership stays active. It ends if your membership is
+        cancelled or ends, and it can&apos;t be combined with other offers or transferred.
+      </p>
+
+      <H2>Changes to the price or this policy</H2>
+      <p>
+        If we change the price, we&apos;ll email you at least 30 days before your next charge at the new price, so you can cancel first if you want
+        to. If we change this policy in a way that matters, we&apos;ll tell you by email or in the app before the change applies. We may change or end
+        the free month for new customers at any time; that never affects a membership you already have.
+      </p>
+
+      <H2>Your rights</H2>
+      <p>Nothing in this policy limits consumer rights or remedies that can&apos;t legally be excluded under applicable law.</p>
+
+      <H2>Contact</H2>
+      <p>
+        Questions about your membership? Email <Mail />. We aim to reply within 1–2 business days.
       </p>
     </Doc>
   );

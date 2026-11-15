@@ -57,7 +57,7 @@ function view(m: MembershipFacts, tz?: string | null): Omit<MembershipView, "dat
         state: "trial",
         badge: "Free month",
         headline: d ? `Free until ${d}` : "Your free month",
-        sub: `Then ${PRICE} every 30 days on the card you used for your AquaOne. We'll email you 3 days before.`,
+        sub: `Then ${PRICE} every 30 days on the card you used for your AquaOne. We'll email you before your first charge.`,
         date: m.trial_ends_at,
         manageLabel: "Manage or cancel membership",
       };
