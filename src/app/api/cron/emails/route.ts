@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import { runDailyEmails, runRetentionEmails } from "@/lib/email.server";
 
-// Daily Vercel Cron (vercel.json): the trial-ending reminder (free month ends in 1-3 days) and
+// Daily Vercel Cron (vercel.json): the trial-ending reminder (free month ends in 7-9 days) and
 // a catch-up for any welcome email the Loop webhook couldn't send, and (retention v1) the monthly
-// summary 3 days before each charge and the 5-day nudge. Retention runs first: in the free month the
-// summary carries the billing notice and counts as the trial-ending email.
+// summary 3 days before each charge (no billing in it) and the 5-day nudge.
 // Vercel sends "Authorization: Bearer $CRON_SECRET" when CRON_SECRET is set on the project.
 export const maxDuration = 800;
 
