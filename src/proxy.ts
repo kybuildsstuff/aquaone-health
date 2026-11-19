@@ -6,7 +6,8 @@ import { createServerClient } from "@supabase/ssr";
 // (app) layout, which can query the database; this is only the optimistic check.
 // API routes check sign-in themselves and answer 401, so the proxy lets them through.
 // "/r" is the public, read-only vet report behind a share link (one cat per unguessable token).
-const PUBLIC = ["/", "/sign-in", "/check-email", "/membership-ended", "/auth", "/api", "/r"];
+// "/join" is the public page past AquaOne buyers reach from email and SMS (src/app/join).
+const PUBLIC = ["/", "/sign-in", "/check-email", "/membership-ended", "/auth", "/api", "/r", "/join"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
