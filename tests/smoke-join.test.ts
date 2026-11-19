@@ -20,9 +20,13 @@ const count = (html: string, needle: string) => html.split(needle).length - 1;
 describe("joinCta", () => {
   it("sends everyone who isn't a member to the tested Loop checkout link", () => {
     expect(joinCta(false)).toEqual({ href: JOIN_CHECKOUT_URL, label: "Start my free month", member: false });
+    // Empties the cart first, so a second tap or a leftover cart can't make two subscriptions...
     const u = new URL(JOIN_CHECKOUT_URL);
-    expect([u.host, u.pathname]).toEqual(["trypurestream.com", "/cart/add"]);
-    expect(Object.fromEntries(u.searchParams)).toEqual({ id: "41499429535808", quantity: "1", selling_plan: "1050804288", return_to: "/checkout" });
+    expect([u.host, u.pathname, [...u.searchParams.keys()]]).toEqual(["trypurestream.com", "/cart/clear", ["return_to"]]);
+    // ...then adds exactly one AquaOne Health on its Loop plan and goes to checkout.
+    const add = new URL(u.searchParams.get("return_to")!, "https://trypurestream.com");
+    expect([add.host, add.pathname]).toEqual(["trypurestream.com", "/cart/add"]);
+    expect(Object.fromEntries(add.searchParams)).toEqual({ id: "41499429535808", quantity: "1", selling_plan: "1050804288", return_to: "/checkout" });
   });
   it("sends a member to the app instead of a second subscription", () => {
     expect(joinCta(true)).toEqual({ href: "/today", label: "Open the app", member: true });
